@@ -1,0 +1,302 @@
+#!/usr/bin/env python3
+"""
+RemoteRadar - 远程工作职位爬虫
+支持爬取 V2EX, Wework Remotely, RemoteOk 等远程招聘网站
+"""
+
+import argparse
+import sys
+from datetime import datetime
+from typing import List, Optional
+
+from src.database import Database
+from src.spiders import V2EXSpider, WeworkSpider, RemoteOkSpider
+from src.models import JobListing
+
+
+class RemoteRadar:
+    AVAILABLE_SPIDERS = ['v2ex', 'wework', 'remoteok', 'all']
+    
+    def __init__(self, db_path: str = "jobs.db"):
+        self.db = Database(db_path)
+        self.stats = {
+            'total_new': 0,
+            'total_updated': 0,
+            'sources': {},
+        }
+    
+    def run_spider(self, spider_name: str, options: dict = None) -> List[JobListing]:
+        options = options or {}
+        jobs = []
+        
+        if spider_name == 'v2ex':
+            spider = V2EXSpider(delay=options.get('delay', 1.0))
+            jobs = spider.crawl(
+                max_pages=options.get('max_pages', 3),
+                fetch_details=options.get('fetch_details', True)
+            )
+            spider.close()
+            
+        elif spider_name == 'wework':
+            spider = WeworkSpider(delay=options.get('delay', 1.0))
+            categories = options.get('categories')
+            if categories and categories != ['all']:
+                jobs = spider.crawl(
+                    use_rss=options.get('use_rss', True),
+                    fetch_details=options.get('fetch_details', False),
+                    categories=categories
+                )
+            else:
+                jobs = spider.crawl(
+                    use_rss=True,
+                    fetch_details=options.get('fetch_details', False)
+                )
+            spider.close()
+            
+        elif spider_name == 'remoteok':
+            spider = RemoteOkSpider(delay=options.get('delay', 1.0))
+            tags = options.get('tags')
+            jobs = spider.crawl(
+                tags=tags if tags and tags != ['all'] else None,
+                max_jobs=options.get('max_jobs', 100)
+            )
+            spider.close()
+        
+        return jobs
+    
+    def save_jobs(self, jobs: List[JobListing], source: str) -> tuple:
+        if source not in self.stats['sources']:
+            self.stats['sources'][source] = {'new': 0, 'updated': 0}
+        
+        new_count = 0
+        updated_count = 0
+        
+        for job in jobs:
+            existing = self.db.find_by_source_and_id(job.source, job.job_id)
+            job_id = self.db.insert_or_update(job)
+            
+            if existing:
+                updated_count += 1
+                self.stats['sources'][source]['updated'] += 1
+                self.stats['total_updated'] += 1
+            else:
+                new_count += 1
+                self.stats['sources'][source]['new'] += 1
+                self.stats['total_new'] += 1
+        
+        return new_count, updated_count
+    
+    def run(self, spiders: List[str], options: dict = None) -> dict:
+        options = options or {}
+        
+        if 'all' in spiders:
+            spiders = ['v2ex', 'wework', 'remoteok']
+        
+        for spider_name in spiders:
+            if spider_name not in self.AVAILABLE_SPIDERS:
+                continue
+            
+            jobs = self.run_spider(spider_name, options)
+            
+            if jobs:
+                self.save_jobs(jobs, spider_name)
+        
+        return self.stats
+    
+    def get_stats(self) -> dict:
+        stats = {
+            'total_jobs': self.db.count_all(),
+            'by_source': {},
+            'latest_jobs': [],
+        }
+        
+        for source in self.db.get_sources():
+            stats['by_source'][source] = self.db.count_by_source(source)
+        
+        latest = self.db.find_all(limit=10)
+        stats['latest_jobs'] = [job.to_dict() for job in latest]
+        
+        return stats
+    
+    def list_jobs(self, source: str = None, limit: int = 50) -> List[JobListing]:
+        if source and source != 'all':
+            return self.db.find_by_source(source, limit=limit)
+        return self.db.find_all(limit=limit)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='RemoteRadar - 远程工作职位爬虫',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog='''
+示例:
+  # 爬取所有支持的网站
+  python main.py --spiders all
+  
+  # 只爬取 V2EX
+  python main.py --spiders v2ex
+  
+  # 爬取多个网站
+  python main.py --spiders v2ex wework
+  
+  # 查看统计信息
+  python main.py --stats
+  
+  # 列出最新职位
+  python main.py --list
+  
+  # 列出特定来源的职位
+  python main.py --list --source v2ex
+        '''
+    )
+    
+    parser.add_argument(
+        '--spiders', '-s',
+        nargs='+',
+        default=['all'],
+        choices=['v2ex', 'wework', 'remoteok', 'all'],
+        help='指定要爬取的网站 (默认: all)'
+    )
+    
+    parser.add_argument(
+        '--max-pages',
+        type=int,
+        default=3,
+        help='V2EX 爬取的最大页数 (默认: 3)'
+    )
+    
+    parser.add_argument(
+        '--max-jobs',
+        type=int,
+        default=100,
+        help='RemoteOk 爬取的最大职位数 (默认: 100)'
+    )
+    
+    parser.add_argument(
+        '--delay',
+        type=float,
+        default=1.0,
+        help='请求间隔时间(秒) (默认: 1.0)'
+    )
+    
+    parser.add_argument(
+        '--no-details',
+        action='store_true',
+        help='不获取职位详情页面，只爬取列表页'
+    )
+    
+    parser.add_argument(
+        '--categories',
+        nargs='+',
+        default=None,
+        choices=['programming', 'design', 'devops', 'customer-support', 'sales', 'all'],
+        help='Wework Remotely 爬取的分类 (默认: all via RSS)'
+    )
+    
+    parser.add_argument(
+        '--tags',
+        nargs='+',
+        default=None,
+        help='RemoteOk 爬取的标签过滤'
+    )
+    
+    parser.add_argument(
+        '--db',
+        default='jobs.db',
+        help='数据库文件路径 (默认: jobs.db)'
+    )
+    
+    parser.add_argument(
+        '--stats',
+        action='store_true',
+        help='显示数据库统计信息'
+    )
+    
+    parser.add_argument(
+        '--list',
+        action='store_true',
+        help='列出最新职位'
+    )
+    
+    parser.add_argument(
+        '--source',
+        default=None,
+        choices=['v2ex', 'wework', 'remoteok', 'all'],
+        help='列表显示时过滤来源'
+    )
+    
+    parser.add_argument(
+        '--limit',
+        type=int,
+        default=50,
+        help='列表显示的数量限制 (默认: 50)'
+    )
+    
+    args = parser.parse_args()
+    
+    radar = RemoteRadar(db_path=args.db)
+    
+    if args.stats:
+        stats = radar.get_stats()
+        print(f"\n=== RemoteRadar 统计信息 ===")
+        print(f"总职位数: {stats['total_jobs']}")
+        print(f"\n按来源分布:")
+        for source, count in stats['by_source'].items():
+            print(f"  {source}: {count} 个职位")
+        print(f"\n最新10个职位:")
+        for job in stats['latest_jobs']:
+            posted = job.get('posted_at', '')
+            if posted:
+                try:
+                    dt = datetime.fromisoformat(posted)
+                    posted = dt.strftime('%Y-%m-%d %H:%M')
+                except Exception:
+                    pass
+            print(f"  [{job['source']}] {job['title']} ({job['company']}) - {posted}")
+        return
+    
+    if args.list:
+        jobs = radar.list_jobs(source=args.source, limit=args.limit)
+        print(f"\n=== 最新职位 (共 {len(jobs)} 个) ===")
+        for i, job in enumerate(jobs, 1):
+            posted = ""
+            if job.posted_at:
+                posted = job.posted_at.strftime('%Y-%m-%d %H:%M')
+            print(f"\n{i}. [{job.source}] {job.title}")
+            print(f"   公司: {job.company or '未知'}")
+            print(f"   地点: {job.location or '全球'}")
+            print(f"   发布时间: {posted}")
+            print(f"   链接: {job.job_url}")
+        return
+    
+    options = {
+        'max_pages': args.max_pages,
+        'max_jobs': args.max_jobs,
+        'delay': args.delay,
+        'fetch_details': not args.no_details,
+        'categories': args.categories,
+        'tags': args.tags,
+    }
+    
+    print(f"\n=== RemoteRadar 开始运行 ===")
+    print(f"爬取目标: {', '.join(args.spiders)}")
+    print(f"数据库: {args.db}")
+    print(f"开始时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    
+    stats = radar.run(spiders=args.spiders, options=options)
+    
+    print(f"\n=== 爬取完成 ===")
+    print(f"结束时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"\n结果统计:")
+    print(f"  新增职位: {stats['total_new']}")
+    print(f"  更新职位: {stats['total_updated']}")
+    print(f"\n按网站分布:")
+    for source, source_stats in stats['sources'].items():
+        print(f"  {source}: 新增 {source_stats['new']}, 更新 {source_stats['updated']}")
+    
+    db_stats = radar.get_stats()
+    print(f"\n数据库总职位数: {db_stats['total_jobs']}")
+
+
+if __name__ == '__main__':
+    main()

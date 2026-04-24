@@ -1,0 +1,118 @@
+name: RemoteRadar - 定时爬取远程工作职位
+
+on:
+  schedule:
+    - cron: '0 */12 * * *'
+  workflow_dispatch:
+    inputs:
+      spiders:
+        description: '要爬取的网站 (v2ex,wework,remoteok 或 all)'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - v2ex
+          - wework
+          - remoteok
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: 创建数据目录
+        run: |
+          mkdir -p data
+          mkdir -p exports
+          
+      - name: 拉取最新数据库
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git pull origin ${{ github.ref_name }} --rebase || true
+          
+      - name: 运行爬虫
+        env:
+          SPIDERS: ${{ inputs.spiders || 'all' }}
+        run: |
+          echo "开始爬取: $SPIDERS"
+          
+          if [ "$SPIDERS" = "all" ]; then
+            python main.py --spiders all --delay 1.5
+          else
+            python main.py --spiders $SPIDERS --delay 1.5
+          fi
+          
+      - name: 导出数据为 JSON
+        run: |
+          python << 'EOF'
+          import json
+          from datetime import datetime
+          from src.database import Database
+          
+          db = Database("jobs.db")
+          
+          stats = {
+              'export_time': datetime.now().isoformat(),
+              'total_jobs': db.count_all(),
+              'by_source': {},
+          }
+          
+          for source in db.get_sources():
+              stats['by_source'][source] = db.count_by_source(source)
+          
+          jobs = db.find_all(limit=1000)
+          jobs_json = [job.to_dict() for job in jobs]
+          
+          with open('exports/stats.json', 'w', encoding='utf-8') as f:
+              json.dump(stats, f, ensure_ascii=False, indent=2)
+          
+          with open('exports/latest_jobs.json', 'w', encoding='utf-8') as f:
+              json.dump(jobs_json, f, ensure_ascii=False, indent=2)
+          
+          for source in db.get_sources():
+              source_jobs = db.find_by_source(source, limit=500)
+              source_json = [job.to_dict() for job in source_jobs]
+              with open(f'exports/{source}_jobs.json', 'w', encoding='utf-8') as f:
+                  json.dump(source_json, f, ensure_ascii=False, indent=2)
+          
+          print(f"导出完成: 共 {len(jobs)} 个职位")
+          print(f"统计: {stats}")
+          EOF
+          
+      - name: 提交并推送更新
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          git add jobs.db exports/
+          
+          git diff --staged --quiet || git commit -m "自动更新: $(date +'%Y-%m-%d %H:%M:%S')
+
+- 爬取新职位数据
+- 导出JSON文件"
+          
+          git push origin ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: 显示统计信息
+        run: |
+          python main.py --stats
