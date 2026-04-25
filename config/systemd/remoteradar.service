@@ -1,0 +1,50 @@
+# RemoteRadar Systemd 服务配置
+# 安装:
+# 1. 复制此文件到 /etc/systemd/system/remoteradar.service
+# 2. 重新加载 systemd: sudo systemctl daemon-reload
+# 3. 启用服务: sudo systemctl enable remoteradar
+# 4. 启动服务: sudo systemctl start remoteradar
+# 5. 查看状态: sudo systemctl status remoteradar
+
+[Unit]
+Description=RemoteRadar - 远程工作职位爬虫和展示平台
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+
+# 工作目录 (项目路径)
+WorkingDirectory=/var/www/remoteradar
+
+# 环境文件 (包含 API_KEY 等敏感信息)
+# EnvironmentFile=/var/www/remoteradar/.env
+
+# 环境变量 (也可以直接在这里设置)
+Environment=PYTHONUNBUFFERED=1
+Environment=MODE=local
+# Environment=API_KEY=your-secret-api-key
+# Environment=API_URL=https://your-domain.com
+
+# 虚拟环境中的 Python (如果使用虚拟环境)
+# ExecStart=/var/www/remoteradar/venv/bin/uvicorn api.main:app --host 127.0.0.1 --port 8000
+
+# 系统 Python (如果不使用虚拟环境)
+ExecStart=/usr/bin/python3 -m uvicorn api.main:app --host 127.0.0.1 --port 8000
+
+# 重启策略
+Restart=always
+RestartSec=5
+
+# 超时设置
+TimeoutStartSec=30
+TimeoutStopSec=30
+
+# 日志
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=remoteradar
+
+[Install]
+WantedBy=multi-user.target
