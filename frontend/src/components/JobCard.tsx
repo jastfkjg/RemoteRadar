@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, Clock, Building2, Briefcase, DollarSign, ExternalLink, Globe } from 'lucide-react';
+import { MapPin, Clock, Building2, Briefcase, DollarSign, ExternalLink } from 'lucide-react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
