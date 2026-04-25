@@ -29,3 +29,16 @@ logs/
 # Cache
 .pytest_cache/
 .mypy_cache/
+
+# Database (SQLite 数据库文件不应该被版本控制)
+*.db
+*.db-journal
+*.db-wal
+
+# Environment
+.env
+
+# Exports (可选：如果不需要追踪导出的 JSON)
+exports/*.json
+
+# 注意: 如果需要保留数据同步，应该使用 API 模式而不是提交数据库文件
