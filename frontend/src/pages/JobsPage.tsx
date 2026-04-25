@@ -19,7 +19,6 @@ export const JobsPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
-  const [isPolling, setIsPolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   const [stats, setStats] = useState<StatsResponse | null>(null);
@@ -60,8 +59,6 @@ export const JobsPage: React.FC = () => {
 
     if (!isPollingCheck) {
       setIsLoading(true);
-    } else {
-      setIsPolling(true);
     }
     
     setError(null);
@@ -104,8 +101,6 @@ export const JobsPage: React.FC = () => {
     } finally {
       if (!isPollingCheck) {
         setIsLoading(false);
-      } else {
-        setIsPolling(false);
       }
     }
   }, []);
