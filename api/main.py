@@ -11,9 +11,26 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from api.routes import router as api_router
 
 
+def get_cors_origins():
+    origins_str = os.getenv("CORS_ORIGINS", "")
+    if origins_str:
+        origins = [o.strip() for o in origins_str.split(",") if o.strip()]
+        if origins:
+            return origins
+    return [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+    ]
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("🚀 RemoteRadar API 启动中...")
+    print(f"✅ CORS 允许的域名: {get_cors_origins()}")
     yield
     print("🛑 RemoteRadar API 已关闭")
 
@@ -27,14 +44,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:8000",
-        "http://127.0.0.1:8000",
-    ],
+    allow_origins=get_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

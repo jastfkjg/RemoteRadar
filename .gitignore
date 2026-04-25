@@ -38,6 +38,9 @@ logs/
 
 # Environment (包含 API_KEY 等敏感信息)
 .env
+.env.local
+.env.development.local
+.env.production.local
 
 # 注意:
 # - API 模式 (推荐): GitHub Actions 调用云服务器 API，数据存储在云服务器
