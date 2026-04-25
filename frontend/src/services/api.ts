@@ -1,8 +1,16 @@
 import axios from 'axios';
 import type { Job, JobListResponse, StatsResponse, FilterOptions } from '../types';
 
+const getBaseURL = (): string => {
+  const envAPIURL = import.meta.env.VITE_API_URL;
+  if (envAPIURL) {
+    return `${envAPIURL}/api`;
+  }
+  return '/api';
+};
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: getBaseURL(),
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
