@@ -31,14 +31,17 @@ logs/
 .mypy_cache/
 
 # Database (SQLite 数据库文件不应该被版本控制)
+# 使用 API 模式时，数据存储在云服务器，不需要提交数据库
 *.db
 *.db-journal
 *.db-wal
 
-# Environment
+# Environment (包含 API_KEY 等敏感信息)
 .env
 
-# Exports (可选：如果不需要追踪导出的 JSON)
-exports/*.json
-
-# 注意: 如果需要保留数据同步，应该使用 API 模式而不是提交数据库文件
+# 注意:
+# - API 模式 (推荐): GitHub Actions 调用云服务器 API，数据存储在云服务器
+# - Local 模式: 写入本地 jobs.db，可导出到 exports/ 目录
+#
+# exports/ 目录用于 Local 模式的数据导出，作为备用方案
+# exports/*.json
