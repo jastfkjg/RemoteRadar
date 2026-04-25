@@ -1,15 +1,27 @@
-# RemoteRadar - 远程工作职位爬虫
+# RemoteRadar - 远程工作职位聚合平台
 
-一个自动爬取远程工作招聘信息的Python程序，支持多个常用远程招聘网站，数据自动存储到SQLite数据库，并支持GitHub Actions定时运行。
+一个完整的远程工作职位抓取和展示平台，包含爬虫、RESTful API和现代化Web界面。
 
 ## 功能特性
 
+### 爬虫功能
 - **多网站支持**：爬取 V2EX、Wework Remotely、RemoteOk 等知名远程招聘平台
 - **丰富数据**：抓取公司信息、职位名称、职位描述、发布时间、薪资范围等
 - **智能去重**：支持根据来源和职位ID自动去重更新
-- **命令行界面**：完整的CLI，支持多种运行模式
 - **GitHub Actions**：内置定时任务，每12小时自动运行一次
-- **数据持久化**：SQLite数据库 + JSON导出，方便数据消费
+
+### Web应用功能
+- **工作展示系统**：美观的职位卡片展示，包含完整的职位信息
+- **筛选功能**：支持按来源、职位类型、发布时间筛选
+- **搜索功能**：支持关键词搜索职位名、公司名、描述
+- **分页浏览**：支持多页浏览职位列表
+- **实时同步**：前端轮询检查新数据，有更新时自动通知
+- **职位详情页**：查看完整的职位描述和公司信息
+
+### 技术架构
+- **后端**：FastAPI + SQLite
+- **前端**：React 18 + TypeScript + Tailwind CSS
+- **构建工具**：Vite
 
 ## 支持的网站
 
@@ -24,7 +36,8 @@
 ### 环境要求
 
 - Python 3.8+
-- pip
+- Node.js 18+
+- npm 或 yarn
 
 ### 安装步骤
 
@@ -34,107 +47,143 @@ git clone <your-repo-url>
 cd RemoteRadar
 ```
 
-2. 创建虚拟环境（推荐）
+2. 安装 Python 依赖
 ```bash
 python -m venv venv
 source venv/bin/activate  # macOS/Linux
 # 或
 venv\Scripts\activate  # Windows
+
+pip install -r requirements.txt
 ```
 
-3. 安装依赖
+3. 安装前端依赖
 ```bash
-pip install -r requirements.txt
+cd frontend
+npm install
+cd ..
+```
+
+## 快速开始
+
+### 方式一：开发模式（推荐）
+
+需要分别启动后端和前端两个终端。
+
+**终端1 - 启动后端：**
+```bash
+source venv/bin/activate
+./scripts/start-backend.sh
+# 或
+uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+**终端2 - 启动前端：**
+```bash
+./scripts/start-frontend.sh
+# 或
+cd frontend && npm run dev
+```
+
+然后访问：
+- 前端页面：http://localhost:3000
+- API文档：http://localhost:8000/docs
+
+### 方式二：生产模式（构建前端）
+
+先构建前端，然后通过 FastAPI 服务静态文件。
+
+```bash
+# 构建前端
+./scripts/build-frontend.sh
+# 或
+cd frontend && npm run build
+
+# 启动后端
+./scripts/start-backend.sh
+```
+
+然后访问：http://localhost:8000
+
+### 方式三：先爬取数据
+
+如果数据库是空的，可以先运行爬虫：
+
+```bash
+./scripts/crawl.sh
+# 或
+python main.py --spiders all
 ```
 
 ## 使用方法
 
-### 基本用法
+### 爬虫命令行
 
-#### 爬取所有网站
 ```bash
+# 爬取所有网站
 python main.py --spiders all
-```
 
-#### 爬取特定网站
-```bash
-# 只爬取 V2EX
+# 爬取特定网站
 python main.py --spiders v2ex
 
-# 爬取多个网站
-python main.py --spiders v2ex wework
-```
-
-#### 查看统计信息
-```bash
+# 查看统计
 python main.py --stats
-```
 
-输出示例：
-```
-=== RemoteRadar 统计信息 ===
-总职位数: 156
-
-按来源分布:
-  v2ex: 45 个职位
-  wework: 68 个职位
-  remoteok: 43 个职位
-
-最新10个职位:
-  [v2ex] Senior Python Developer (ABC Tech) - 2024-01-15 10:30
-  [wework] Frontend Engineer (Remote) - 2024-01-15 09:00
-  ...
-```
-
-#### 列出最新职位
-```bash
-# 列出所有来源最新50个职位
+# 列出职位
 python main.py --list
-
-# 只列出 V2EX 的职位
 python main.py --list --source v2ex
-
-# 列出100个职位
-python main.py --list --limit 100
 ```
 
-### 高级用法
+### Web界面功能
 
-#### V2EX 高级选项
-```bash
-# 爬取5页（默认3页）
-python main.py --spiders v2ex --max-pages 5
+#### 职位列表页
+- **统计栏**：显示总职位数和各来源分布
+- **筛选面板**：
+  - 来源筛选：V2EX、Wework、RemoteOk
+  - 时间筛选：今天、本周、本月、全部
+  - 职位类型筛选
+- **搜索框**：支持关键词搜索
+- **职位卡片**：展示公司Logo、职位名、公司名、地点、薪资、标签
+- **分页**：支持页码导航
 
-# 不获取详情页，只爬取列表（更快）
-python main.py --spiders v2ex --no-details
-```
+#### 职位详情页
+- 完整的职位信息展示
+- 公司信息和Logo
+- 访问公司网站按钮
+- 查看原职位按钮
+- 标签展示
+- 详细描述
+- 发布/更新时间
 
-#### Wework Remotely 高级选项
-```bash
-# 只爬取编程类职位
-python main.py --spiders wework --categories programming
+#### 实时同步
+- 前端每30秒自动检查新数据
+- 有新数据时显示通知栏
+- 点击通知刷新页面
 
-# 爬取多个分类
-python main.py --spiders wework --categories programming design devops
-```
+### API 接口
 
-#### RemoteOk 高级选项
-```bash
-# 最多爬取200个职位（默认100）
-python main.py --spiders remoteok --max-jobs 200
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/jobs` | 获取职位列表（支持筛选、分页、搜索） |
+| GET | `/api/jobs/{id}` | 获取单个职位详情 |
+| GET | `/api/stats` | 获取统计信息 |
+| GET | `/api/filters` | 获取筛选选项 |
+| GET | `/api/health` | 健康检查 |
+| GET | `/docs` | Swagger API文档 |
+| GET | `/redoc` | ReDoc API文档 |
 
-# 按标签过滤
-python main.py --spiders remoteok --tags python javascript
-```
+#### `/api/jobs` 查询参数
 
-#### 其他选项
-```bash
-# 指定数据库路径
-python main.py --spiders all --db /path/to/my.db
-
-# 设置请求间隔为2秒（默认1秒，避免被封）
-python main.py --spiders all --delay 2.0
-```
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `page` | int | 页码，默认1 |
+| `page_size` | int | 每页数量，默认20，最大100 |
+| `source` | string | 筛选来源 (v2ex, wework, remoteok) |
+| `job_type` | string | 筛选职位类型 |
+| `days_ago` | int | 筛选最近N天内的职位 |
+| `search` | string | 搜索关键词 |
+| `sort_by` | string | 排序字段 (posted_at, created_at, updated_at, title, company) |
+| `sort_order` | string | 排序方式 (asc, desc) |
 
 ## 项目结构
 
@@ -142,26 +191,61 @@ python main.py --spiders all --delay 2.0
 RemoteRadar/
 ├── .github/
 │   └── workflows/
-│       └── crawl.yml          # GitHub Actions 定时任务
+│       └── crawl.yml              # GitHub Actions 定时任务
+├── api/
+│   ├── __init__.py
+│   ├── main.py                     # FastAPI 主应用
+│   ├── routes.py                   # API 路由
+│   ├── schemas.py                  # Pydantic 数据模型
+│   └── database_service.py         # 异步数据库服务
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── Header.tsx          # 头部导航
+│   │   │   ├── JobCard.tsx         # 职位卡片
+│   │   │   ├── Pagination.tsx      # 分页组件
+│   │   │   ├── FilterPanel.tsx     # 筛选面板
+│   │   │   └── common.tsx          # 通用组件（加载、空状态等）
+│   │   ├── pages/
+│   │   │   ├── JobsPage.tsx        # 职位列表页
+│   │   │   └── JobDetailPage.tsx   # 职位详情页
+│   │   ├── services/
+│   │   │   └── api.ts              # API 服务封装
+│   │   ├── types/
+│   │   │   └── index.ts            # TypeScript 类型定义
+│   │   ├── router.tsx              # 路由配置
+│   │   ├── App.tsx
+│   │   ├── main.tsx
+│   │   └── index.css
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── vite.config.ts
+│   ├── tailwind.config.js
+│   └── postcss.config.js
+├── scripts/
+│   ├── start-backend.sh            # 启动后端
+│   ├── start-frontend.sh           # 启动前端
+│   ├── build-frontend.sh           # 构建前端
+│   └── crawl.sh                    # 运行爬虫
 ├── src/
 │   ├── __init__.py
 │   ├── models/
 │   │   ├── __init__.py
-│   │   └── job_listing.py     # 数据模型定义
+│   │   └── job_listing.py          # 数据模型
 │   ├── database/
 │   │   ├── __init__.py
-│   │   └── database.py        # SQLite 数据库操作
+│   │   └── database.py             # SQLite 数据库操作（同步）
 │   └── spiders/
 │       ├── __init__.py
-│       ├── v2ex_spider.py     # V2EX 爬虫
-│       ├── wework_spider.py   # Wework Remotely 爬虫
-│       └── remoteok_spider.py # RemoteOk 爬虫
-├── exports/                    # JSON 导出目录 (自动创建)
-├── jobs.db                     # SQLite 数据库 (自动创建)
-├── main.py                     # 主程序入口
-├── requirements.txt            # Python 依赖
-├── .gitignore                  # Git 忽略配置
-└── README.md                   # 本文档
+│       ├── v2ex_spider.py          # V2EX 爬虫
+│       ├── wework_spider.py        # Wework Remotely 爬虫
+│       └── remoteok_spider.py      # RemoteOk 爬虫
+├── exports/                        # JSON 导出目录
+├── jobs.db                         # SQLite 数据库
+├── main.py                         # 爬虫主程序
+├── requirements.txt                # Python 依赖
+├── .gitignore
+└── README.md
 ```
 
 ## 数据模型
@@ -197,54 +281,52 @@ RemoteRadar/
 2. **手动触发**：可在 GitHub Actions 页面手动运行，支持选择爬取目标
 3. **数据持久化**：每次运行后自动提交 `jobs.db` 和 `exports/` 目录到仓库
 
-### 导出的数据文件
-
-每次运行后会生成以下 JSON 文件：
-
-| 文件 | 说明 |
-|------|------|
-| `exports/stats.json` | 统计信息（总数量、按来源分布） |
-| `exports/latest_jobs.json` | 最新1000个职位详情 |
-| `exports/v2ex_jobs.json` | V2EX 来源的职位 |
-| `exports/wework_jobs.json` | Wework Remotely 来源的职位 |
-| `exports/remoteok_jobs.json` | RemoteOk 来源的职位 |
-
-### 启用 GitHub Actions
+### 启用步骤
 
 1. 将代码推送到 GitHub 仓库
 2. 进入仓库 → Settings → Actions → General
 3. 确保 "Read and write permissions" 已启用（用于提交数据）
-4. （可选）首次运行可以手动触发：Actions → RemoteRadar - 定时爬取 → Run workflow
+4. 首次运行可以手动触发：Actions → RemoteRadar - 定时爬取 → Run workflow
+
+## 开发指南
+
+### 添加新的爬虫源
+
+1. 在 `src/spiders/` 目录下创建新的 Spider 类（参考现有爬虫）
+2. 在 `src/spiders/__init__.py` 中导出
+3. 在 `main.py` 中注册到可用爬虫列表
+
+### 自定义前端样式
+
+项目使用 Tailwind CSS 4，配置文件在 `frontend/tailwind.config.js`。
+
+### API 扩展
+
+在 `api/routes.py` 中添加新的端点，在 `api/schemas.py` 中定义数据模型。
 
 ## 常见问题
 
-### Q: 爬取速度如何调整？
-A: 使用 `--delay` 参数调整请求间隔，单位为秒。建议设置 1-2 秒避免被网站限制。
+### Q: 前端无法连接后端？
+A: 确保后端已启动在 8000 端口，前端 vite.config.ts 已配置代理。开发模式下前端会自动代理 `/api` 请求到后端。
 
-### Q: 数据库可以迁移吗？
-A: SQLite 是文件数据库，直接复制 `jobs.db` 文件即可迁移。也可以使用导出的 JSON 文件。
+### Q: 数据库为空？
+A: 先运行爬虫 `python main.py --spiders all` 或等待 GitHub Actions 定时任务执行。
 
-### Q: 如何添加新的爬虫源？
-A: 在 `src/spiders/` 目录下创建新的 Spider 类，参考现有爬虫实现，然后在 `src/spiders/__init__.py` 和 `main.py` 中注册。
+### Q: 如何修改轮询间隔？
+A: 在 `frontend/src/pages/JobsPage.tsx` 中修改 `POLL_INTERVAL` 常量（毫秒）。
 
-### Q: 数据会重复吗？
-A: 不会。每个职位使用 `(source, job_id)` 作为唯一标识，插入时会自动检测：
-- 新职位：直接插入
-- 已存在：更新字段并更新 `updated_at` 时间
+### Q: 如何添加新的筛选条件？
+A: 修改以下位置：
+1. `api/routes.py` - 添加新的查询参数
+2. `api/database_service.py` - 添加数据库筛选逻辑
+3. `frontend/src/components/FilterPanel.tsx` - 添加 UI 组件
+4. `frontend/src/pages/JobsPage.tsx` - 处理新参数
 
 ## 注意事项
 
-1. **使用限制**：请合理设置请求间隔，遵守各网站的 robots.txt 和使用条款
+1. **爬虫使用限制**：请合理设置请求间隔，遵守各网站的 robots.txt 和使用条款
 2. **数据准确性**：爬虫依赖网站结构，如果网站改版可能需要更新爬虫
-3. **网络环境**：部分网站可能需要代理才能访问，如需代理可在爬虫中添加代理配置
-
-## 扩展建议
-
-- 添加更多爬虫源（如 Stack Overflow Jobs, AngelList 等）
-- 添加数据分析和可视化功能
-- 添加邮件/消息通知（新职位提醒）
-- 部署到云服务器获得更高频率的更新
-- 添加 Web 界面展示职位
+3. **CORS 配置**：后端已配置 CORS 白名单，如需添加新域名请修改 `api/main.py`
 
 ## 许可证
 
