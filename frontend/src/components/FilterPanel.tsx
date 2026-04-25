@@ -1,21 +1,17 @@
 import React from 'react';
-import { Filter, RefreshCw, X, Calendar, Tag, Layers, Code2, Users } from 'lucide-react';
+import { Filter, RefreshCw, X, Calendar, Tag, Layers, Code2 } from 'lucide-react';
 import type { FilterOptions } from '../types';
 
 interface FilterPanelProps {
   filters: FilterOptions | null;
   selectedSource: string;
-  selectedJobType: string;
   selectedDaysAgo: number | null;
   selectedCategory: string;
   selectedTechStack: string;
-  selectedSeniority: string;
   onSourceChange: (source: string) => void;
-  onJobTypeChange: (type: string) => void;
   onDaysAgoChange: (days: number | null) => void;
   onCategoryChange: (category: string) => void;
   onTechStackChange: (tech: string) => void;
-  onSeniorityChange: (level: string) => void;
   onReset: () => void;
   isLoading: boolean;
   hasActiveFilters: boolean;
@@ -25,6 +21,13 @@ const sourceNames: Record<string, string> = {
   v2ex: 'V2EX',
   weworkremotely: 'Wework Remotely',
   remoteok: 'RemoteOk',
+  remotive: 'Remotive',
+  stackoverflow: 'Stack Overflow',
+  wellfound: 'Wellfound (AngelList)',
+  remoteco: 'Remote.co',
+  workingnomads: 'Working Nomads',
+  nofluffjobs: 'NoFluffJobs',
+  eleduck: '电鸭社区',
 };
 
 const dateOptions = [
@@ -37,17 +40,13 @@ const dateOptions = [
 export const FilterPanel: React.FC<FilterPanelProps> = ({
   filters,
   selectedSource,
-  selectedJobType,
   selectedDaysAgo,
   selectedCategory,
   selectedTechStack,
-  selectedSeniority,
   onSourceChange,
-  onJobTypeChange,
   onDaysAgoChange,
   onCategoryChange,
   onTechStackChange,
-  onSeniorityChange,
   onReset,
   isLoading,
   hasActiveFilters,
@@ -133,44 +132,6 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           )}
         </div>
 
-        <div>
-          <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
-            <Users className="w-4 h-4 mr-1.5 text-gray-400" />
-            职级
-          </label>
-          {filters?.seniority_levels && filters.seniority_levels.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => onSeniorityChange('')}
-                disabled={isLoading}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  selectedSeniority === ''
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                } disabled:opacity-50`}
-              >
-                全部
-              </button>
-              {filters.seniority_levels.map((level) => (
-                <button
-                  key={level}
-                  onClick={() => onSeniorityChange(level)}
-                  disabled={isLoading}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    selectedSeniority === level
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  } disabled:opacity-50`}
-                >
-                  {level}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-gray-400">暂无数据</p>
-          )}
-        </div>
-
         <div className="border-t border-gray-100 pt-5">
           <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
             <Tag className="w-4 h-4 mr-1.5 text-gray-400" />
@@ -227,27 +188,6 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
             ))}
           </div>
         </div>
-
-        {filters?.job_types && filters.job_types.length > 0 && (
-          <div>
-            <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
-              原始职位类型
-            </label>
-            <select
-              value={selectedJobType}
-              onChange={(e) => onJobTypeChange(e.target.value)}
-              disabled={isLoading}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:opacity-50"
-            >
-              <option value="">全部类型</option>
-              {filters.job_types.slice(0, 20).map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
       </div>
 
       {isLoading && (

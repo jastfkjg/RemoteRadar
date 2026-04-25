@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 RemoteRadar - 远程工作职位爬虫
-支持爬取 V2EX, Wework Remotely, RemoteOk 等远程招聘网站
+支持爬取多个远程工作招聘网站
 """
 
 import argparse
@@ -10,12 +10,32 @@ from datetime import datetime
 from typing import List, Optional
 
 from src.database import Database
-from src.spiders import V2EXSpider, WeworkSpider, RemoteOkSpider
+from src.spiders import (
+    V2EXSpider, 
+    WeworkSpider, 
+    RemoteOkSpider, 
+    RemotiveSpider,
+    StackOverflowSpider,
+    EluduckSpider,
+    WellfoundSpider,
+    RemoteCoSpider,
+    WorkingNomadsSpider,
+    NoFluffJobsSpider,
+)
 from src.models import JobListing
 
 
 class RemoteRadar:
-    AVAILABLE_SPIDERS = ['v2ex', 'wework', 'remoteok', 'all']
+    AVAILABLE_SPIDERS = [
+        'v2ex', 'wework', 'remoteok', 'remotive', 'stackoverflow',
+        'wellfound', 'remoteco', 'workingnomads', 'nofluffjobs',
+        'eleduck', 'all'
+    ]
+    
+    DEFAULT_SPIDERS = [
+        'v2ex', 'wework', 'remoteok', 'remotive', 'stackoverflow',
+        'wellfound', 'remoteco', 'workingnomads', 'nofluffjobs'
+    ]
     
     def __init__(self, db_path: str = "jobs.db"):
         self.db = Database(db_path)
@@ -62,6 +82,73 @@ class RemoteRadar:
             )
             spider.close()
         
+        elif spider_name == 'remotive':
+            spider = RemotiveSpider(delay=options.get('delay', 1.0))
+            categories = options.get('categories')
+            jobs = spider.crawl(
+                categories=categories if categories and categories != ['all'] else None,
+                search=options.get('search'),
+                max_jobs=options.get('max_jobs', 100)
+            )
+            spider.close()
+        
+        elif spider_name == 'stackoverflow':
+            spider = StackOverflowSpider(delay=options.get('delay', 1.0))
+            categories = options.get('categories')
+            jobs = spider.crawl(
+                categories=categories if categories and categories != ['all'] else None,
+                search=options.get('search'),
+                max_jobs=options.get('max_jobs', 100)
+            )
+            spider.close()
+        
+        elif spider_name == 'wellfound':
+            spider = WellfoundSpider(delay=options.get('delay', 1.5))
+            categories = options.get('categories')
+            jobs = spider.crawl(
+                categories=categories if categories and categories != ['all'] else None,
+                max_jobs=options.get('max_jobs', 100),
+                fetch_details=options.get('fetch_details', False)
+            )
+            spider.close()
+        
+        elif spider_name == 'remoteco':
+            spider = RemoteCoSpider(delay=options.get('delay', 1.5))
+            categories = options.get('categories')
+            jobs = spider.crawl(
+                categories=categories if categories and categories != ['all'] else None,
+                max_jobs=options.get('max_jobs', 100)
+            )
+            spider.close()
+        
+        elif spider_name == 'workingnomads':
+            spider = WorkingNomadsSpider(delay=options.get('delay', 1.5))
+            categories = options.get('categories')
+            jobs = spider.crawl(
+                categories=categories if categories and categories != ['all'] else None,
+                max_jobs=options.get('max_jobs', 100),
+                use_rss=options.get('use_rss', True)
+            )
+            spider.close()
+        
+        elif spider_name == 'nofluffjobs':
+            spider = NoFluffJobsSpider(delay=options.get('delay', 1.5))
+            categories = options.get('categories')
+            jobs = spider.crawl(
+                categories=categories if categories and categories != ['all'] else None,
+                max_jobs=options.get('max_jobs', 100)
+            )
+            spider.close()
+        
+        elif spider_name == 'eleduck':
+            spider = EluduckSpider(delay=options.get('delay', 1.0))
+            jobs = spider.crawl(
+                max_pages=options.get('max_pages', 3),
+                use_rss=options.get('use_rss', True),
+                fetch_details=options.get('fetch_details', True)
+            )
+            spider.close()
+        
         return jobs
     
     def save_jobs(self, jobs: List[JobListing], source: str) -> tuple:
@@ -90,7 +177,7 @@ class RemoteRadar:
         options = options or {}
         
         if 'all' in spiders:
-            spiders = ['v2ex', 'wework', 'remoteok']
+            spiders = self.DEFAULT_SPIDERS
         
         for spider_name in spiders:
             if spider_name not in self.AVAILABLE_SPIDERS:
@@ -130,14 +217,17 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='''
 示例:
-  # 爬取所有支持的网站
+  # 爬取所有支持的网站（默认不包含电鸭社区，因为有反爬机制）
   python main.py --spiders all
   
-  # 只爬取 V2EX
-  python main.py --spiders v2ex
+  # 只爬取特定网站
+  python main.py --spiders remotive wellfound
   
   # 爬取多个网站
-  python main.py --spiders v2ex wework
+  python main.py --spiders v2ex remotive stackoverflow wellfound
+  
+  # 爬取电鸭社区（可能需要人工验证）
+  python main.py --spiders eleduck
   
   # 查看统计信息
   python main.py --stats
@@ -146,7 +236,19 @@ def main():
   python main.py --list
   
   # 列出特定来源的职位
-  python main.py --list --source v2ex
+  python main.py --list --source remotive
+
+支持的网站:
+  v2ex          - V2EX 社区远程工作节点
+  wework        - Wework Remotely
+  remoteok      - RemoteOK
+  remotive      - Remotive (公开API)
+  stackoverflow - Stack Overflow Jobs (RSS)
+  wellfound     - Wellfound (原 AngelList)
+  remoteco      - Remote.co
+  workingnomads - Working Nomads (RSS)
+  nofluffjobs   - NoFluffJobs (欧洲技术岗位)
+  eleduck       - 电鸭社区 (有反爬机制)
         '''
     )
     
@@ -154,29 +256,30 @@ def main():
         '--spiders', '-s',
         nargs='+',
         default=['all'],
-        choices=['v2ex', 'wework', 'remoteok', 'all'],
-        help='指定要爬取的网站 (默认: all)'
+        choices=['v2ex', 'wework', 'remoteok', 'remotive', 'stackoverflow',
+                 'wellfound', 'remoteco', 'workingnomads', 'nofluffjobs', 'eleduck', 'all'],
+        help='指定要爬取的网站 (默认: all - 除 eleduck 外)'
     )
     
     parser.add_argument(
         '--max-pages',
         type=int,
         default=3,
-        help='V2EX 爬取的最大页数 (默认: 3)'
+        help='V2EX/电鸭社区 爬取的最大页数 (默认: 3)'
     )
     
     parser.add_argument(
         '--max-jobs',
         type=int,
         default=100,
-        help='RemoteOk 爬取的最大职位数 (默认: 100)'
+        help='每个网站爬取的最大职位数 (默认: 100)'
     )
     
     parser.add_argument(
         '--delay',
         type=float,
-        default=1.0,
-        help='请求间隔时间(秒) (默认: 1.0)'
+        default=1.5,
+        help='请求间隔时间(秒) (默认: 1.5)'
     )
     
     parser.add_argument(
@@ -189,8 +292,7 @@ def main():
         '--categories',
         nargs='+',
         default=None,
-        choices=['programming', 'design', 'devops', 'customer-support', 'sales', 'all'],
-        help='Wework Remotely 爬取的分类 (默认: all via RSS)'
+        help='爬取的分类'
     )
     
     parser.add_argument(
@@ -198,6 +300,12 @@ def main():
         nargs='+',
         default=None,
         help='RemoteOk 爬取的标签过滤'
+    )
+    
+    parser.add_argument(
+        '--search',
+        default=None,
+        help='搜索关键词'
     )
     
     parser.add_argument(
@@ -221,7 +329,8 @@ def main():
     parser.add_argument(
         '--source',
         default=None,
-        choices=['v2ex', 'wework', 'remoteok', 'all'],
+        choices=['v2ex', 'wework', 'remoteok', 'remotive', 'stackoverflow',
+                 'wellfound', 'remoteco', 'workingnomads', 'nofluffjobs', 'eleduck', 'all'],
         help='列表显示时过滤来源'
     )
     
@@ -276,6 +385,7 @@ def main():
         'fetch_details': not args.no_details,
         'categories': args.categories,
         'tags': args.tags,
+        'search': args.search,
     }
     
     print(f"\n=== RemoteRadar 开始运行 ===")
