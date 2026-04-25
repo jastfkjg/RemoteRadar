@@ -23,13 +23,13 @@ on:
           - nofluffjobs
           - eleduck
       mode:
-        description: '运行模式'
+        description: '运行模式 (默认: API 模式)'
         required: false
-        default: 'local'
+        default: 'api'
         type: choice
         options:
-          - local
           - api
+          - local
 
 jobs:
   crawl:
@@ -40,7 +40,7 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           
       - name: 设置 Python
         uses: actions/setup-python@v5
@@ -59,23 +59,22 @@ jobs:
         timeout-minutes: 1
         run: |
           mkdir -p data
-          mkdir -p exports
           
-      - name: 拉取最新数据库 (Local 模式)
-        timeout-minutes: 3
-        if: ${{ inputs.mode == 'local' || inputs.mode == '' }}
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git pull origin ${{ github.ref_name }} --rebase || true
-          
-      - name: 检查 API 连接 (API 模式)
+      - name: 检查 API 连接
         timeout-minutes: 1
-        if: ${{ inputs.mode == 'api' }}
+        if: ${{ inputs.mode == 'api' || inputs.mode == '' }}
         env:
           API_URL: ${{ secrets.API_URL }}
           API_KEY: ${{ secrets.API_KEY }}
         run: |
+          if [ -z "$API_URL" ] || [ -z "$API_KEY" ]; then
+            echo "错误: API_URL 或 API_KEY 未配置!"
+            echo "请在 GitHub 仓库 Settings → Secrets and variables → Actions 中添加:"
+            echo "- API_URL: 你的云服务器地址 (如 http://1.2.3.4:8001)"
+            echo "- API_KEY: 你的 API 密钥"
+            exit 1
+          fi
+          
           echo "检查 API 连接..."
           response=$(curl -s -w "%{http_code}" -o /tmp/health_response.json -H "X-API-Key: $API_KEY" "$API_URL/api/health")
           echo "HTTP 状态码: $response"
@@ -85,26 +84,13 @@ jobs:
             cat /tmp/health_response.json
           else
             echo "API 连接失败! 请检查 API_URL 和 API_KEY 配置"
+            echo "API_URL: $API_URL"
             exit 1
           fi
           
-      - name: 运行爬虫 (Local 模式)
-        timeout-minutes: 15
-        if: ${{ inputs.mode == 'local' || inputs.mode == '' }}
-        env:
-          SPIDERS: ${{ inputs.spiders || 'all' }}
-        run: |
-          echo "开始爬取: $SPIDERS (Local 模式)"
-          
-          if [ "$SPIDERS" = "all" ]; then
-            python main.py --spiders all --delay 1.0 --max-jobs 50 --stop-after 3
-          else
-            python main.py --spiders $SPIDERS --delay 1.0 --max-jobs 50 --stop-after 3
-          fi
-          
       - name: 运行爬虫 (API 模式)
-        timeout-minutes: 15
-        if: ${{ inputs.mode == 'api' }}
+        timeout-minutes: 20
+        if: ${{ inputs.mode == 'api' || inputs.mode == '' }}
         env:
           SPIDERS: ${{ inputs.spiders || 'all' }}
           API_URL: ${{ secrets.API_URL }}
@@ -120,62 +106,22 @@ jobs:
             python main.py --mode api --spiders $SPIDERS --delay 1.0 --max-jobs 50 --stop-after 3
           fi
           
-      - name: 导出数据为 JSON (Local 模式)
-        timeout-minutes: 3
-        if: ${{ inputs.mode == 'local' || inputs.mode == '' }}
-        run: |
-          python << 'EOF'
-          import json
-          from datetime import datetime
-          from src.database import Database
-          
-          db = Database("jobs.db")
-          
-          stats = {
-              'export_time': datetime.now().isoformat(),
-              'total_jobs': db.count_all(),
-              'by_source': {},
-          }
-          
-          for source in db.get_sources():
-              stats['by_source'][source] = db.count_by_source(source)
-          
-          jobs = db.find_all(limit=1000)
-          jobs_json = [job.to_dict() for job in jobs]
-          
-          with open('exports/stats.json', 'w', encoding='utf-8') as f:
-              json.dump(stats, f, ensure_ascii=False, indent=2)
-          
-          with open('exports/latest_jobs.json', 'w', encoding='utf-8') as f:
-              json.dump(jobs_json, f, ensure_ascii=False, indent=2)
-          
-          for source in db.get_sources():
-              source_jobs = db.find_by_source(source, limit=500)
-              source_json = [job.to_dict() for job in source_jobs]
-              with open(f'exports/{source}_jobs.json', 'w', encoding='utf-8') as f:
-                  json.dump(source_json, f, ensure_ascii=False, indent=2)
-          
-          print(f"导出完成: 共 {len(jobs)} 个职位")
-          print(f"统计: {stats}")
-          EOF
-          
-      - name: 提交并推送更新 (Local 模式)
-        timeout-minutes: 5
-        if: ${{ inputs.mode == 'local' || inputs.mode == '' }}
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          
-          git add jobs.db exports/
-          
-          git diff --staged --quiet || git commit -m "自动更新: $(date +'%Y-%m-%d %H:%M:%S')"
-          
-          git push origin ${{ github.ref_name }}
+      - name: 运行爬虫 (Local 模式)
+        timeout-minutes: 20
+        if: ${{ inputs.mode == 'local' }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SPIDERS: ${{ inputs.spiders || 'all' }}
+        run: |
+          echo "开始爬取: $SPIDERS (Local 模式)"
+          
+          if [ "$SPIDERS" = "all" ]; then
+            python main.py --spiders all --delay 1.0 --max-jobs 50 --stop-after 3
+          else
+            python main.py --spiders $SPIDERS --delay 1.0 --max-jobs 50 --stop-after 3
+          fi
           
       - name: 显示统计信息 (Local 模式)
         timeout-minutes: 2
-        if: ${{ inputs.mode == 'local' || inputs.mode == '' }}
+        if: ${{ inputs.mode == 'local' }}
         run: |
           python main.py --stats
