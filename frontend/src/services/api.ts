@@ -18,6 +18,9 @@ export const jobApi = {
     location?: string;
     days_ago?: number;
     search?: string;
+    category?: string;
+    tech_stack?: string;
+    seniority?: string;
     sort_by?: string;
     sort_order?: string;
     since_time?: string;

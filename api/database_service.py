@@ -1,7 +1,7 @@
 import sqlite3
 import aiosqlite
 from datetime import datetime, timedelta
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Set
 from contextlib import asynccontextmanager
 
 from api.schemas import JobSchema
@@ -38,6 +38,9 @@ class APIDatabaseService:
             posted_at=datetime.fromisoformat(row['posted_at']) if row['posted_at'] else None,
             created_at=datetime.fromisoformat(row['created_at']) if row['created_at'] else None,
             updated_at=datetime.fromisoformat(row['updated_at']) if row['updated_at'] else None,
+            categories=row['categories'] if 'categories' in row.keys() and row['categories'] else '',
+            tech_stacks=row['tech_stacks'] if 'tech_stacks' in row.keys() and row['tech_stacks'] else '',
+            seniority=row['seniority'] if 'seniority' in row.keys() and row['seniority'] else '',
         )
     
     async def count_jobs(
@@ -47,6 +50,9 @@ class APIDatabaseService:
         location: Optional[str] = None,
         days_ago: Optional[int] = None,
         search: Optional[str] = None,
+        category: Optional[str] = None,
+        tech_stack: Optional[str] = None,
+        seniority: Optional[str] = None,
     ) -> int:
         conditions = []
         params = []
@@ -79,6 +85,18 @@ class APIDatabaseService:
             conditions.append(f"({ ' OR '.join(search_conditions) })")
             params.extend([search_param] * 4)
         
+        if category:
+            conditions.append("categories LIKE ?")
+            params.append(f"%{category}%")
+        
+        if tech_stack:
+            conditions.append("tech_stacks LIKE ?")
+            params.append(f"%{tech_stack}%")
+        
+        if seniority:
+            conditions.append("seniority LIKE ?")
+            params.append(f"%{seniority}%")
+        
         where_clause = " AND ".join(conditions) if conditions else "1=1"
         
         async with self.get_connection() as conn:
@@ -98,6 +116,9 @@ class APIDatabaseService:
         location: Optional[str] = None,
         days_ago: Optional[int] = None,
         search: Optional[str] = None,
+        category: Optional[str] = None,
+        tech_stack: Optional[str] = None,
+        seniority: Optional[str] = None,
         sort_by: str = "posted_at",
         sort_order: str = "desc",
     ) -> tuple[List[JobSchema], int, int]:
@@ -131,6 +152,18 @@ class APIDatabaseService:
             search_param = f"%{search}%"
             conditions.append(f"({ ' OR '.join(search_conditions) })")
             params.extend([search_param] * 4)
+        
+        if category:
+            conditions.append("categories LIKE ?")
+            params.append(f"%{category}%")
+        
+        if tech_stack:
+            conditions.append("tech_stacks LIKE ?")
+            params.append(f"%{tech_stack}%")
+        
+        if seniority:
+            conditions.append("seniority LIKE ?")
+            params.append(f"%{seniority}%")
         
         where_clause = " AND ".join(conditions) if conditions else "1=1"
         
@@ -196,6 +229,51 @@ class APIDatabaseService:
                         result.append(stripped)
             return result
     
+    async def get_categories(self) -> List[str]:
+        async with self.get_connection() as conn:
+            cursor = await conn.execute(
+                "SELECT DISTINCT categories FROM job_listings WHERE categories IS NOT NULL AND categories != ''"
+            )
+            rows = await cursor.fetchall()
+            result: Set[str] = set()
+            for row in rows:
+                if row[0]:
+                    for cat in row[0].split(','):
+                        stripped = cat.strip()
+                        if stripped:
+                            result.add(stripped)
+            return sorted(list(result))
+    
+    async def get_tech_stacks(self) -> List[str]:
+        async with self.get_connection() as conn:
+            cursor = await conn.execute(
+                "SELECT DISTINCT tech_stacks FROM job_listings WHERE tech_stacks IS NOT NULL AND tech_stacks != ''"
+            )
+            rows = await cursor.fetchall()
+            result: Set[str] = set()
+            for row in rows:
+                if row[0]:
+                    for tech in row[0].split(','):
+                        stripped = tech.strip()
+                        if stripped:
+                            result.add(stripped)
+            return sorted(list(result))
+    
+    async def get_seniority_levels(self) -> List[str]:
+        async with self.get_connection() as conn:
+            cursor = await conn.execute(
+                "SELECT DISTINCT seniority FROM job_listings WHERE seniority IS NOT NULL AND seniority != ''"
+            )
+            rows = await cursor.fetchall()
+            result: Set[str] = set()
+            for row in rows:
+                if row[0]:
+                    for level in row[0].split(','):
+                        stripped = level.strip()
+                        if stripped:
+                            result.add(stripped)
+            return sorted(list(result))
+    
     async def get_locations(self) -> List[str]:
         async with self.get_connection() as conn:
             cursor = await conn.execute(
@@ -222,12 +300,18 @@ class APIDatabaseService:
             
             sources = await self.get_sources()
             job_types = await self.get_job_types()
+            categories = await self.get_categories()
+            tech_stacks = await self.get_tech_stacks()
+            seniority_levels = await self.get_seniority_levels()
             
             return {
                 "total_jobs": total,
                 "by_source": by_source,
                 "sources": sources,
                 "job_types": job_types,
+                "categories": categories,
+                "tech_stacks": tech_stacks,
+                "seniority_levels": seniority_levels,
                 "latest_update": latest_update,
             }
     
