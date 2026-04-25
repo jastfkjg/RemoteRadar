@@ -29,6 +29,8 @@ from src.spiders import (
     RemoteCoSpider,
     WorkingNomadsSpider,
     NoFluffJobsSpider,
+    HimalayasSpider,
+    JustRemoteSpider,
 )
 from src.models import JobListing
 from src.api_client import RemoteAPIClient, job_listing_to_api_dict
@@ -38,11 +40,11 @@ class RemoteRadar:
     AVAILABLE_SPIDERS = [
         'v2ex', 'wework', 'remoteok', 'remotive', 'stackoverflow',
         'wellfound', 'remoteco', 'workingnomads', 'nofluffjobs',
-        'eleduck', 'all'
+        'himalayas', 'justremote', 'eleduck', 'all'
     ]
     
     DEFAULT_SPIDERS = [
-        'remoteok', 'remotive', 'stackoverflow', 'workingnomads', 'wework'
+        'remoteok', 'remotive', 'wework', 'workingnomads', 'himalayas'
     ]
     
     def __init__(self, db_path: str = "jobs.db", mode: str = "local", api_url: str = None, api_key: str = None):
@@ -185,6 +187,28 @@ class RemoteRadar:
         
         elif spider_name == 'nofluffjobs':
             spider = NoFluffJobsSpider(delay=options.get('delay', 1.5))
+            categories = options.get('categories')
+            jobs = spider.crawl(
+                categories=categories if categories and categories != ['all'] else None,
+                max_jobs=options.get('max_jobs', 100),
+                existing_ids=existing_ids,
+                stop_after_duplicates=stop_after
+            )
+            spider.close()
+        
+        elif spider_name == 'himalayas':
+            spider = HimalayasSpider(delay=options.get('delay', 1.0))
+            categories = options.get('categories')
+            jobs = spider.crawl(
+                categories=categories if categories and categories != ['all'] else None,
+                max_jobs=options.get('max_jobs', 100),
+                existing_ids=existing_ids,
+                stop_after_duplicates=stop_after
+            )
+            spider.close()
+        
+        elif spider_name == 'justremote':
+            spider = JustRemoteSpider(delay=options.get('delay', 1.0))
             categories = options.get('categories')
             jobs = spider.crawl(
                 categories=categories if categories and categories != ['all'] else None,

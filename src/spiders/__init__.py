@@ -8,3 +8,5 @@ from .wellfound_spider import WellfoundSpider
 from .remoteco_spider import RemoteCoSpider
 from .workingnomads_spider import WorkingNomadsSpider
 from .nofluffjobs_spider import NoFluffJobsSpider
+from .himalayas_spider import HimalayasSpider
+from .justremote_spider import JustRemoteSpider

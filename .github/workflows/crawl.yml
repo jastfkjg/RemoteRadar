@@ -21,6 +21,8 @@ on:
           - remoteco
           - workingnomads
           - nofluffjobs
+          - himalayas
+          - justremote
           - eleduck
       mode:
         description: '运行模式 (默认: API 模式)'

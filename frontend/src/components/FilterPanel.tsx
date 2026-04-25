@@ -19,6 +19,7 @@ interface FilterPanelProps {
 
 const sourceNames: Record<string, string> = {
   v2ex: 'V2EX',
+  wework: 'Wework Remotely',
   weworkremotely: 'Wework Remotely',
   remoteok: 'RemoteOk',
   remotive: 'Remotive',
@@ -27,6 +28,8 @@ const sourceNames: Record<string, string> = {
   remoteco: 'Remote.co',
   workingnomads: 'Working Nomads',
   nofluffjobs: 'NoFluffJobs',
+  himalayas: 'Himalayas',
+  justremote: 'JustRemote',
   eleduck: '电鸭社区',
 };
 
