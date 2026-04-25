@@ -25,7 +25,7 @@ class V2EXSpider:
     
     def fetch_page(self, url: str) -> str:
         time.sleep(self.delay)
-        response = self.session.get(url)
+        response = self.session.get(url, timeout=(10, 30))
         response.raise_for_status()
         response.encoding = 'utf-8'
         return response.text
@@ -127,9 +127,12 @@ class V2EXSpider:
         
         return result
     
-    def crawl(self, max_pages: int = 3, fetch_details: bool = True) -> List[JobListing]:
+    def crawl(self, max_pages: int = 3, fetch_details: bool = True,
+              existing_ids: set = None, stop_after_duplicates: int = 5) -> List[JobListing]:
         all_jobs = []
         seen_ids = set()
+        existing_ids = existing_ids or set()
+        consecutive_duplicates = 0
         
         for page in range(1, max_pages + 1):
             page_url = f"{self.REMOTE_NODE_URL}?p={page}"
@@ -143,6 +146,14 @@ class V2EXSpider:
                         continue
                     seen_ids.add(topic_id)
                     
+                    if topic_id in existing_ids:
+                        consecutive_duplicates += 1
+                        if consecutive_duplicates >= stop_after_duplicates:
+                            print(f"  [V2EX] 遇到连续 {consecutive_duplicates} 个已存在职位，停止爬取")
+                            return all_jobs
+                        continue
+                    
+                    consecutive_duplicates = 0
                     parsed = self.parse_title(job_data['title'])
                     
                     description = ""

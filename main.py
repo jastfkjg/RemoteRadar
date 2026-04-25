@@ -33,8 +33,7 @@ class RemoteRadar:
     ]
     
     DEFAULT_SPIDERS = [
-        'v2ex', 'wework', 'remoteok', 'remotive', 'stackoverflow',
-        'wellfound', 'remoteco', 'workingnomads', 'nofluffjobs'
+        'remoteok', 'remotive', 'stackoverflow', 'workingnomads', 'wework'
     ]
     
     def __init__(self, db_path: str = "jobs.db"):
@@ -49,11 +48,16 @@ class RemoteRadar:
         options = options or {}
         jobs = []
         
+        existing_ids = options.get('existing_ids', set())
+        stop_after = options.get('stop_after_duplicates', 5)
+        
         if spider_name == 'v2ex':
             spider = V2EXSpider(delay=options.get('delay', 1.0))
             jobs = spider.crawl(
                 max_pages=options.get('max_pages', 3),
-                fetch_details=options.get('fetch_details', True)
+                fetch_details=options.get('fetch_details', True),
+                existing_ids=existing_ids,
+                stop_after_duplicates=stop_after
             )
             spider.close()
             
@@ -64,12 +68,16 @@ class RemoteRadar:
                 jobs = spider.crawl(
                     use_rss=options.get('use_rss', True),
                     fetch_details=options.get('fetch_details', False),
-                    categories=categories
+                    categories=categories,
+                    existing_ids=existing_ids,
+                    stop_after_duplicates=stop_after
                 )
             else:
                 jobs = spider.crawl(
                     use_rss=True,
-                    fetch_details=options.get('fetch_details', False)
+                    fetch_details=options.get('fetch_details', False),
+                    existing_ids=existing_ids,
+                    stop_after_duplicates=stop_after
                 )
             spider.close()
             
@@ -78,7 +86,9 @@ class RemoteRadar:
             tags = options.get('tags')
             jobs = spider.crawl(
                 tags=tags if tags and tags != ['all'] else None,
-                max_jobs=options.get('max_jobs', 100)
+                max_jobs=options.get('max_jobs', 100),
+                existing_ids=existing_ids,
+                stop_after_duplicates=stop_after
             )
             spider.close()
         
@@ -88,7 +98,9 @@ class RemoteRadar:
             jobs = spider.crawl(
                 categories=categories if categories and categories != ['all'] else None,
                 search=options.get('search'),
-                max_jobs=options.get('max_jobs', 100)
+                max_jobs=options.get('max_jobs', 100),
+                existing_ids=existing_ids,
+                stop_after_duplicates=stop_after
             )
             spider.close()
         
@@ -98,7 +110,9 @@ class RemoteRadar:
             jobs = spider.crawl(
                 categories=categories if categories and categories != ['all'] else None,
                 search=options.get('search'),
-                max_jobs=options.get('max_jobs', 100)
+                max_jobs=options.get('max_jobs', 100),
+                existing_ids=existing_ids,
+                stop_after_duplicates=stop_after
             )
             spider.close()
         
@@ -108,7 +122,9 @@ class RemoteRadar:
             jobs = spider.crawl(
                 categories=categories if categories and categories != ['all'] else None,
                 max_jobs=options.get('max_jobs', 100),
-                fetch_details=options.get('fetch_details', False)
+                fetch_details=options.get('fetch_details', False),
+                existing_ids=existing_ids,
+                stop_after_duplicates=stop_after
             )
             spider.close()
         
@@ -117,7 +133,9 @@ class RemoteRadar:
             categories = options.get('categories')
             jobs = spider.crawl(
                 categories=categories if categories and categories != ['all'] else None,
-                max_jobs=options.get('max_jobs', 100)
+                max_jobs=options.get('max_jobs', 100),
+                existing_ids=existing_ids,
+                stop_after_duplicates=stop_after
             )
             spider.close()
         
@@ -127,7 +145,9 @@ class RemoteRadar:
             jobs = spider.crawl(
                 categories=categories if categories and categories != ['all'] else None,
                 max_jobs=options.get('max_jobs', 100),
-                use_rss=options.get('use_rss', True)
+                use_rss=options.get('use_rss', True),
+                existing_ids=existing_ids,
+                stop_after_duplicates=stop_after
             )
             spider.close()
         
@@ -136,7 +156,9 @@ class RemoteRadar:
             categories = options.get('categories')
             jobs = spider.crawl(
                 categories=categories if categories and categories != ['all'] else None,
-                max_jobs=options.get('max_jobs', 100)
+                max_jobs=options.get('max_jobs', 100),
+                existing_ids=existing_ids,
+                stop_after_duplicates=stop_after
             )
             spider.close()
         
@@ -145,7 +167,9 @@ class RemoteRadar:
             jobs = spider.crawl(
                 max_pages=options.get('max_pages', 3),
                 use_rss=options.get('use_rss', True),
-                fetch_details=options.get('fetch_details', True)
+                fetch_details=options.get('fetch_details', True),
+                existing_ids=existing_ids,
+                stop_after_duplicates=stop_after
             )
             spider.close()
         
@@ -183,10 +207,18 @@ class RemoteRadar:
             if spider_name not in self.AVAILABLE_SPIDERS:
                 continue
             
+            existing_ids = self.db.get_existing_job_ids(spider_name)
+            print(f"\n[{spider_name}] 已存在 {len(existing_ids)} 个职位，开始增量爬取...")
+            
+            options['existing_ids'] = existing_ids
+            
             jobs = self.run_spider(spider_name, options)
             
             if jobs:
+                print(f"  发现 {len(jobs)} 个新职位")
                 self.save_jobs(jobs, spider_name)
+            else:
+                print(f"  没有发现新职位")
         
         return self.stats
     
@@ -217,8 +249,15 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='''
 示例:
-  # 爬取所有支持的网站（默认不包含电鸭社区，因为有反爬机制）
+  # 增量爬取所有支持的网站（默认不包含电鸭社区）
+  # 遇到连续5个已存在职位后自动停止
   python main.py --spiders all
+  
+  # 遇到连续10个已存在职位后停止
+  python main.py --spiders all --stop-after 10
+  
+  # 禁用增量爬取，爬取所有职位
+  python main.py --spiders all --no-incremental
   
   # 只爬取特定网站
   python main.py --spiders remotive wellfound
@@ -309,6 +348,19 @@ def main():
     )
     
     parser.add_argument(
+        '--stop-after',
+        type=int,
+        default=5,
+        help='遇到连续多少个已存在职位后停止爬取 (默认: 5)'
+    )
+    
+    parser.add_argument(
+        '--no-incremental',
+        action='store_true',
+        help='禁用增量爬取，爬取所有职位'
+    )
+    
+    parser.add_argument(
         '--db',
         default='jobs.db',
         help='数据库文件路径 (默认: jobs.db)'
@@ -386,7 +438,11 @@ def main():
         'categories': args.categories,
         'tags': args.tags,
         'search': args.search,
+        'stop_after_duplicates': args.stop_after if not args.no_incremental else 999999,
     }
+    
+    if args.no_incremental:
+        options['existing_ids'] = set()
     
     print(f"\n=== RemoteRadar 开始运行 ===")
     print(f"爬取目标: {', '.join(args.spiders)}")

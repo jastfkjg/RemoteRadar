@@ -27,7 +27,7 @@ class EluduckSpider:
     
     def fetch_page(self, url: str) -> str:
         time.sleep(self.delay)
-        response = self.session.get(url)
+        response = self.session.get(url, timeout=(10, 30))
         response.raise_for_status()
         response.encoding = 'utf-8'
         return response.text
@@ -284,9 +284,12 @@ class EluduckSpider:
         
         return None
     
-    def crawl(self, max_pages: int = 3, use_rss: bool = True, fetch_details: bool = True) -> List[JobListing]:
+    def crawl(self, max_pages: int = 3, use_rss: bool = True, fetch_details: bool = True,
+              existing_ids: set = None, stop_after_duplicates: int = 5) -> List[JobListing]:
         all_jobs = []
         seen_ids = set()
+        existing_ids = existing_ids or set()
+        consecutive_duplicates = 0
         
         if use_rss:
             try:
@@ -299,6 +302,14 @@ class EluduckSpider:
                         continue
                     seen_ids.add(job_id)
                     
+                    if job_id in existing_ids:
+                        consecutive_duplicates += 1
+                        if consecutive_duplicates >= stop_after_duplicates:
+                            print(f"  [电鸭社区] 遇到连续 {consecutive_duplicates} 个已存在职位，停止爬取")
+                            return all_jobs
+                        continue
+                    
+                    consecutive_duplicates = 0
                     description = job_data.get('description', '')
                     company = job_data.get('company', '')
                     salary = job_data.get('salary', '')
@@ -344,6 +355,14 @@ class EluduckSpider:
                             continue
                         seen_ids.add(job_id)
                         
+                        if job_id in existing_ids:
+                            consecutive_duplicates += 1
+                            if consecutive_duplicates >= stop_after_duplicates:
+                                print(f"  [电鸭社区] 遇到连续 {consecutive_duplicates} 个已存在职位，停止爬取")
+                                return all_jobs
+                            continue
+                        
+                        consecutive_duplicates = 0
                         description = ""
                         company = job_data.get('company', '')
                         salary = job_data.get('salary', '')
