@@ -41,6 +41,36 @@ class APIDatabaseService:
             )
         ''')
         
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_profiles (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL UNIQUE,
+                categories TEXT,
+                tech_stacks TEXT,
+                seniority TEXT,
+                locations TEXT,
+                min_salary INTEGER,
+                max_salary INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_actions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                job_id INTEGER NOT NULL,
+                action_type TEXT NOT NULL,
+                duration_seconds INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_actions_user ON user_actions(user_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_actions_job ON user_actions(job_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_actions_created ON user_actions(created_at)')
+        
         cursor.execute("PRAGMA table_info(job_listings)")
         columns = [row[1] for row in cursor.fetchall()]
         
@@ -372,6 +402,128 @@ class APIDatabaseService:
             )
             row = await cursor.fetchone()
             return datetime.fromisoformat(row[0]) if row[0] else None
+    
+    async def get_existing_job_ids(self, source: str) -> Set[str]:
+        async with self.get_connection() as conn:
+            cursor = await conn.execute(
+                "SELECT job_id FROM job_listings WHERE source = ?",
+                (source,)
+            )
+            rows = await cursor.fetchall()
+            return {row[0] for row in rows}
+    
+    async def insert_or_update_job(self, job_data: dict) -> tuple[int, bool]:
+        from src.classifier import job_classifier
+        
+        source = job_data.get('source', '')
+        job_id = job_data.get('job_id', '')
+        title = job_data.get('title', '')
+        description = job_data.get('description', '')
+        location = job_data.get('location', '')
+        
+        categories = job_data.get('categories', '')
+        tech_stacks = job_data.get('tech_stacks', '')
+        seniority = job_data.get('seniority', '')
+        
+        if not categories or not tech_stacks:
+            classified = job_classifier.classify(
+                title=title,
+                description=description,
+                location=location
+            )
+            if not categories:
+                categories = ', '.join(classified.get('categories', []))
+            if not tech_stacks:
+                tech_stacks = ', '.join(classified.get('tech_stacks', []))
+            if not seniority:
+                seniority = ', '.join(classified.get('seniority', []))
+        
+        now = datetime.now().isoformat()
+        
+        async with self.get_connection() as conn:
+            cursor = await conn.execute(
+                "SELECT id FROM job_listings WHERE source = ? AND job_id = ?",
+                (source, job_id)
+            )
+            existing = await cursor.fetchone()
+            
+            if existing:
+                await conn.execute('''
+                    UPDATE job_listings 
+                    SET title=?, company=?, company_url=?, company_logo=?,
+                        description=?, location=?, job_type=?, salary=?,
+                        tags=?, job_url=?, posted_at=?, updated_at=?,
+                        categories=?, tech_stacks=?, seniority=?
+                    WHERE source=? AND job_id=?
+                ''', (
+                    job_data.get('title', ''),
+                    job_data.get('company', ''),
+                    job_data.get('company_url', ''),
+                    job_data.get('company_logo', ''),
+                    job_data.get('description', ''),
+                    job_data.get('location', ''),
+                    job_data.get('job_type', ''),
+                    job_data.get('salary', ''),
+                    job_data.get('tags', ''),
+                    job_data.get('job_url', ''),
+                    job_data.get('posted_at'),
+                    now,
+                    categories,
+                    tech_stacks,
+                    seniority,
+                    source,
+                    job_id
+                ))
+                await conn.commit()
+                return existing[0], False
+            else:
+                cursor = await conn.execute('''
+                    INSERT INTO job_listings (
+                        source, job_id, title, company, company_url, company_logo,
+                        description, location, job_type, salary, tags, job_url,
+                        posted_at, created_at, updated_at,
+                        categories, tech_stacks, seniority
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    source, job_id,
+                    job_data.get('title', ''),
+                    job_data.get('company', ''),
+                    job_data.get('company_url', ''),
+                    job_data.get('company_logo', ''),
+                    job_data.get('description', ''),
+                    job_data.get('location', ''),
+                    job_data.get('job_type', ''),
+                    job_data.get('salary', ''),
+                    job_data.get('tags', ''),
+                    job_data.get('job_url', ''),
+                    job_data.get('posted_at'),
+                    now, now,
+                    categories,
+                    tech_stacks,
+                    seniority,
+                ))
+                await conn.commit()
+                return cursor.lastrowid, True
+    
+    async def batch_insert_jobs(self, jobs: list[dict]) -> dict:
+        new_count = 0
+        updated_count = 0
+        job_ids = []
+        
+        for job_data in jobs:
+            job_id, is_new = await self.insert_or_update_job(job_data)
+            job_ids.append(job_id)
+            if is_new:
+                new_count += 1
+            else:
+                updated_count += 1
+        
+        return {
+            'total': len(jobs),
+            'new': new_count,
+            'updated': updated_count,
+            'job_ids': job_ids,
+        }
 
 
 db_service = APIDatabaseService()

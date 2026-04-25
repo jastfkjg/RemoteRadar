@@ -22,6 +22,14 @@ on:
           - workingnomads
           - nofluffjobs
           - eleduck
+      mode:
+        description: '运行模式'
+        required: false
+        default: 'local'
+        type: choice
+        options:
+          - local
+          - api
 
 jobs:
   crawl:
@@ -53,19 +61,40 @@ jobs:
           mkdir -p data
           mkdir -p exports
           
-      - name: 拉取最新数据库
+      - name: 拉取最新数据库 (Local 模式)
         timeout-minutes: 3
+        if: ${{ inputs.mode == 'local' || inputs.mode == '' }}
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git pull origin ${{ github.ref_name }} --rebase || true
           
-      - name: 运行爬虫
+      - name: 检查 API 连接 (API 模式)
+        timeout-minutes: 1
+        if: ${{ inputs.mode == 'api' }}
+        env:
+          API_URL: ${{ secrets.API_URL }}
+          API_KEY: ${{ secrets.API_KEY }}
+        run: |
+          echo "检查 API 连接..."
+          response=$(curl -s -w "%{http_code}" -o /tmp/health_response.json -H "X-API-Key: $API_KEY" "$API_URL/api/health")
+          echo "HTTP 状态码: $response"
+          
+          if [ "$response" = "200" ]; then
+            echo "API 连接成功!"
+            cat /tmp/health_response.json
+          else
+            echo "API 连接失败! 请检查 API_URL 和 API_KEY 配置"
+            exit 1
+          fi
+          
+      - name: 运行爬虫 (Local 模式)
         timeout-minutes: 15
+        if: ${{ inputs.mode == 'local' || inputs.mode == '' }}
         env:
           SPIDERS: ${{ inputs.spiders || 'all' }}
         run: |
-          echo "开始爬取: $SPIDERS"
+          echo "开始爬取: $SPIDERS (Local 模式)"
           
           if [ "$SPIDERS" = "all" ]; then
             python main.py --spiders all --delay 1.0 --max-jobs 50 --stop-after 3
@@ -73,8 +102,27 @@ jobs:
             python main.py --spiders $SPIDERS --delay 1.0 --max-jobs 50 --stop-after 3
           fi
           
-      - name: 导出数据为 JSON
+      - name: 运行爬虫 (API 模式)
+        timeout-minutes: 15
+        if: ${{ inputs.mode == 'api' }}
+        env:
+          SPIDERS: ${{ inputs.spiders || 'all' }}
+          API_URL: ${{ secrets.API_URL }}
+          API_KEY: ${{ secrets.API_KEY }}
+          MODE: 'api'
+        run: |
+          echo "开始爬取: $SPIDERS (API 模式)"
+          echo "API 地址: $API_URL"
+          
+          if [ "$SPIDERS" = "all" ]; then
+            python main.py --mode api --spiders all --delay 1.0 --max-jobs 50 --stop-after 3
+          else
+            python main.py --mode api --spiders $SPIDERS --delay 1.0 --max-jobs 50 --stop-after 3
+          fi
+          
+      - name: 导出数据为 JSON (Local 模式)
         timeout-minutes: 3
+        if: ${{ inputs.mode == 'local' || inputs.mode == '' }}
         run: |
           python << 'EOF'
           import json
@@ -111,8 +159,9 @@ jobs:
           print(f"统计: {stats}")
           EOF
           
-      - name: 提交并推送更新
+      - name: 提交并推送更新 (Local 模式)
         timeout-minutes: 5
+        if: ${{ inputs.mode == 'local' || inputs.mode == '' }}
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
@@ -125,7 +174,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
-      - name: 显示统计信息
+      - name: 显示统计信息 (Local 模式)
         timeout-minutes: 2
+        if: ${{ inputs.mode == 'local' || inputs.mode == '' }}
         run: |
           python main.py --stats

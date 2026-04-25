@@ -1,12 +1,21 @@
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Query, HTTPException, Depends
 from typing import Optional, List
 from datetime import datetime
 
-from api.schemas import JobSchema, JobListResponse, StatsResponse, FilterOptions
+from api.schemas import (
+    JobSchema, JobListResponse, StatsResponse, FilterOptions,
+    BatchCreateRequest, BatchCreateResponse,
+    UserProfileSchema, UserProfileUpdate, UserActionSchema,
+    RecommendationResponse, InferredProfileResponse
+)
 from api.database_service import db_service
+from api.auth import get_api_key, get_api_key_optional
+from api.recommender import Recommender
 
 
 router = APIRouter(prefix="/api", tags=["jobs"])
+
+recommender = Recommender()
 
 
 @router.get("/jobs", response_model=JobListResponse)
@@ -111,3 +120,111 @@ async def health_check():
         "total_jobs": stats.get("total_jobs", 0),
         "timestamp": datetime.now().isoformat(),
     }
+
+
+@router.get("/jobs/existing-ids/{source}")
+async def get_existing_job_ids(
+    source: str,
+    api_key: str = Depends(get_api_key)
+):
+    existing_ids = await db_service.get_existing_job_ids(source)
+    return {
+        "source": source,
+        "existing_ids": list(existing_ids),
+        "count": len(existing_ids)
+    }
+
+
+@router.post("/jobs/batch", response_model=BatchCreateResponse)
+async def batch_create_jobs(
+    request: BatchCreateRequest,
+    api_key: str = Depends(get_api_key)
+):
+    jobs_data = []
+    for job in request.jobs:
+        job_dict = job.model_dump()
+        if job_dict.get('posted_at'):
+            job_dict['posted_at'] = job_dict['posted_at'].isoformat() if job_dict['posted_at'] else None
+        jobs_data.append(job_dict)
+    
+    result = await db_service.batch_insert_jobs(jobs_data)
+    return BatchCreateResponse(**result)
+
+
+@router.get("/profiles/{user_id}", response_model=UserProfileSchema)
+async def get_user_profile(user_id: str):
+    profile = recommender.get_user_or_create(user_id)
+    return UserProfileSchema(
+        user_id=profile.user_id,
+        categories=profile.categories,
+        tech_stacks=profile.tech_stacks,
+        seniority=profile.seniority,
+        locations=profile.locations,
+        min_salary=profile.min_salary,
+        max_salary=profile.max_salary,
+    )
+
+
+@router.put("/profiles/{user_id}", response_model=UserProfileSchema)
+async def update_user_profile(user_id: str, update: UserProfileUpdate):
+    profile_data = {}
+    if update.categories is not None:
+        profile_data['categories'] = update.categories
+    if update.tech_stacks is not None:
+        profile_data['tech_stacks'] = update.tech_stacks
+    if update.seniority is not None:
+        profile_data['seniority'] = update.seniority
+    if update.locations is not None:
+        profile_data['locations'] = update.locations
+    if update.min_salary is not None:
+        profile_data['min_salary'] = update.min_salary
+    if update.max_salary is not None:
+        profile_data['max_salary'] = update.max_salary
+    
+    profile = recommender.update_user_profile(user_id, profile_data)
+    return UserProfileSchema(
+        user_id=profile.user_id,
+        categories=profile.categories,
+        tech_stacks=profile.tech_stacks,
+        seniority=profile.seniority,
+        locations=profile.locations,
+        min_salary=profile.min_salary,
+        max_salary=profile.max_salary,
+    )
+
+
+@router.post("/actions")
+async def record_user_action(action: UserActionSchema):
+    action_id = recommender.record_user_action(
+        user_id=action.user_id,
+        job_id=action.job_id,
+        action_type=action.action_type,
+        duration_seconds=action.duration_seconds,
+    )
+    return {
+        "status": "ok",
+        "action_id": action_id,
+    }
+
+
+@router.get("/profiles/{user_id}/infer", response_model=InferredProfileResponse)
+async def infer_user_profile(user_id: str):
+    inferred = recommender.infer_profile_from_actions(user_id)
+    return InferredProfileResponse(**inferred)
+
+
+@router.get("/recommendations/{user_id}", response_model=RecommendationResponse)
+async def get_recommendations(
+    user_id: str,
+    limit: int = Query(20, ge=1, le=100, description="推荐数量"),
+    days: int = Query(14, ge=1, le=60, description="考虑最近多少天的职位"),
+):
+    recommendations = recommender.get_recommendations(user_id, limit=limit, days=days)
+    
+    is_hot = all(r['score'] == 0 for r in recommendations) if recommendations else False
+    
+    return RecommendationResponse(
+        user_id=user_id,
+        recommendations=recommendations,
+        is_hot=is_hot,
+    )
