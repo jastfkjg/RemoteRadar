@@ -1,137 +1,315 @@
+import asyncio
 import re
-import time
+import hashlib
 from datetime import datetime
-from typing import List, Optional, Dict, Any
-import requests
-from bs4 import BeautifulSoup
+from typing import List, Optional, Dict, Any, Set
 
+from .playwright_spider import PlaywrightSpider
 from ..models.job_listing import JobListing
 
 
-class JustRemoteSpider:
+class JustRemoteSpider(PlaywrightSpider):
     SOURCE = "justremote"
     BASE_URL = "https://justremote.co"
-    RSS_URL = "https://justremote.co/rss"
-    
-    REQUEST_HEADERS = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "application/rss+xml, text/xml, application/xml, text/html, */*",
-        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-        "Referer": "https://justremote.co/",
-    }
     
     CATEGORIES = [
-        'development', 'design', 'product', 'marketing', 'sales',
+        'developer', 'design', 'marketing', 'sales',
         'data', 'devops', 'finance', 'content', 'operations', 'all'
     ]
     
-    def __init__(self, delay: float = 1.0):
-        self.delay = delay
-        self.session = requests.Session()
-        self.session.headers.update(self.REQUEST_HEADERS)
+    CATEGORY_URLS = {
+        'developer': '/remote-developer-jobs',
+        'design': '/remote-design-jobs',
+        'marketing': '/remote-marketing-jobs',
+        'sales': '/remote-sales-jobs',
+        'data': '/remote-data-science-jobs',
+        'devops': '/remote-devops-sysadmin-jobs',
+        'finance': '/remote-finance-jobs',
+        'content': '/remote-editing-jobs',
+        'operations': '/remote-project-manager-jobs',
+        'all': '/',
+    }
     
-    def fetch_rss(self, url: str = None) -> str:
-        time.sleep(self.delay)
-        target_url = url or self.RSS_URL
-        response = self.session.get(target_url, allow_redirects=True, timeout=(10, 30))
-        response.raise_for_status()
-        response.encoding = 'utf-8'
-        return response.text
+    def __init__(self, delay: float = 2.0, headless: bool = True):
+        super().__init__(delay=delay, headless=headless)
     
-    def parse_rss(self, xml_content: str) -> List[Dict[str, Any]]:
-        jobs = []
+    async def _crawl_async(self, categories: List[str] = None, max_jobs: int = 100,
+                           existing_ids: set = None, stop_after_duplicates: int = 5) -> List[JobListing]:
+        all_jobs = []
+        seen_ids = set()
+        existing_ids = existing_ids or set()
+        consecutive_duplicates = 0
         
-        try:
-            soup = BeautifulSoup(xml_content, 'xml')
-            
-            entries = soup.find_all('entry')
-            items = soup.find_all('item')
-            
-            all_items = entries if entries else items
-            
-            for item in all_items:
-                try:
-                    job = self._parse_item(item)
-                    if job:
-                        jobs.append(job)
-                except Exception as e:
-                    continue
-        except Exception as e:
-            pass
+        urls_to_try = []
         
-        return jobs
-    
-    def _parse_item(self, item) -> Optional[Dict[str, Any]]:
-        try:
-            title = item.find('title')
-            title_text = title.get_text(strip=True) if title else ""
-            
-            link = item.find('link')
-            job_url = ""
-            if link:
-                if link.get('href'):
-                    job_url = link.get('href')
-                elif link.get_text(strip=True):
-                    job_url = link.get_text(strip=True)
-            
-            id_elem = item.find('id') or item.find('guid')
-            id_text = id_elem.get_text(strip=True) if id_elem else job_url
-            
-            description = item.find('description') or item.find('summary') or item.find('content')
-            description_text = ""
-            if description:
-                desc_html = description.get_text(strip=True)
-                description_text = self._clean_description(desc_html)
-            
-            pub_date = item.find('pubDate') or item.find('published') or item.find('updated')
-            posted_at = None
-            if pub_date:
-                posted_at = self._parse_date(pub_date.get_text(strip=True))
-            
-            categories = []
-            category_elems = item.find_all('category')
-            for cat in category_elems:
-                cat_text = cat.get_text(strip=True)
-                if cat_text:
-                    categories.append(cat_text)
-            
-            company = ""
-            location = ""
-            salary = ""
-            
-            if title_text:
-                company_match = re.search(r'(?:at|@|with)\s+([^,\n|]+?)(?:,|\n|\||$)', title_text, re.IGNORECASE)
-                if company_match:
-                    company = company_match.group(1).strip()
-            
-            if description_text:
-                location_match = re.search(r'(?:Location|地点|位置|Remote)\s*[:：\s]+([^\n\r，。,，]+)', description_text, re.IGNORECASE)
-                if location_match:
-                    location = location_match.group(1).strip()
+        if categories and categories != ['all']:
+            for cat in categories:
+                if cat in self.CATEGORY_URLS:
+                    urls_to_try.append(f"{self.BASE_URL}{self.CATEGORY_URLS[cat]}")
+        else:
+            urls_to_try.append(f"{self.BASE_URL}/")
+        
+        async with self.browser_context():
+            for url in urls_to_try:
+                if len(all_jobs) >= max_jobs:
+                    break
                 
-                salary_match = re.search(r'(?:Salary|薪资|Pay|Compensation)\s*[:：\s]+([^\n\r，。,，]+)', description_text, re.IGNORECASE)
-                if salary_match:
-                    salary = salary_match.group(1).strip()
+                try:
+                    print(f"  [JustRemote] 正在访问: {url}")
+                    await self.navigate_and_wait(url, wait_selector='a[href*="/remote-"]', timeout=30000)
+                    
+                    await self.scroll_to_bottom(scroll_pause=1.0, max_scrolls=3)
+                    
+                    job_links = await self._extract_job_links()
+                    
+                    print(f"  [JustRemote] 发现 {len(job_links)} 个职位链接")
+                    
+                    for job_link in job_links:
+                        if len(all_jobs) >= max_jobs:
+                            break
+                        
+                        job_href = job_link.get('href', '')
+                        job_text = job_link.get('text', '')
+                        
+                        job_id = self._extract_job_id(job_href)
+                        if not job_id:
+                            continue
+                        
+                        if job_id in seen_ids:
+                            continue
+                        seen_ids.add(job_id)
+                        
+                        if job_id in existing_ids:
+                            consecutive_duplicates += 1
+                            if consecutive_duplicates >= stop_after_duplicates:
+                                print(f"  [JustRemote] 遇到连续 {consecutive_duplicates} 个已存在职位，停止爬取")
+                                return all_jobs
+                            continue
+                        
+                        consecutive_duplicates = 0
+                        
+                        job_data = await self._fetch_job_detail(job_href, job_text)
+                        if job_data:
+                            job_data['job_id'] = job_id
+                            job_listing = self._create_job_listing(job_data)
+                            if job_listing:
+                                all_jobs.append(job_listing)
+                                print(f"    ✓ {job_listing.title} at {job_listing.company}")
+                    
+                except Exception as e:
+                    print(f"  [JustRemote] 爬取出错: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    continue
+        
+        return all_jobs
+    
+    async def _extract_job_links(self) -> List[Dict[str, str]]:
+        if not self.page:
+            return []
+        
+        try:
+            links = await self.page.evaluate('''
+                () => {
+                    const results = [];
+                    const seen = new Set();
+                    
+                    const categoryPattern = /\\/remote-(developer|design|marketing|sales|data-science|devops-sysadmin|finance|editing|project-manager|manager-exec|customer-service|hr|recruiter|seo|social-media|writing)-jobs\\//;
+                    
+                    document.querySelectorAll('a').forEach(a => {
+                        const href = a.href;
+                        if (!href || !href.startsWith('http')) return;
+                        if (seen.has(href)) return;
+                        
+                        if (href.includes('justremote.co') && 
+                            categoryPattern.test(href) &&
+                            !href.includes('/new') &&
+                            !href.includes('?') &&
+                            !href.includes('#')) {
+                            
+                            const segments = href.split('/');
+                            const lastSegment = segments[segments.length - 1];
+                            
+                            if (lastSegment && lastSegment.length > 10) {
+                                seen.add(href);
+                                results.push({
+                                    href: href,
+                                    text: a.innerText?.trim() || ''
+                                });
+                            }
+                        }
+                    });
+                    
+                    return results;
+                }
+            ''')
             
-            job_id = self._extract_job_id(job_url or id_text)
-            if not job_id:
-                return None
+            return links
+        except Exception as e:
+            print(f"  [JustRemote] 提取链接出错: {e}")
+            return []
+    
+    async def _fetch_job_detail(self, url: str, default_text: str = '') -> Optional[Dict[str, Any]]:
+        if not self.page:
+            return None
+        
+        try:
+            await self.page.goto(url, wait_until='networkidle', timeout=30000)
+            await self.page.wait_for_timeout(self.delay * 500)
             
-            tags_str = ', '.join(categories) if categories else ''
+            page_text = await self.page.inner_text('body')
             
-            return {
-                'title': title_text,
-                'company': company,
-                'location': location or 'Remote',
-                'salary': salary,
-                'job_url': job_url,
-                'job_id': job_id,
-                'description': description_text,
-                'posted_at': posted_at,
-                'tags': tags_str,
+            job_data = {
+                'job_url': url,
+                'title': '',
+                'company': '',
+                'location': '',
+                'salary': '',
+                'description': '',
+                'posted_at': None,
+                'tags': '',
             }
             
+            title_selectors = [
+                'h1',
+                '[class*="title"]',
+                '[class*="job-title"]',
+                '[class*="position"]',
+            ]
+            
+            for selector in title_selectors:
+                try:
+                    title_elem = await self.page.query_selector(selector)
+                    if title_elem:
+                        title_text = await title_elem.inner_text()
+                        if title_text and len(title_text) > 2:
+                            job_data['title'] = title_text.strip()
+                            break
+                except Exception:
+                    continue
+            
+            if not job_data['title'] and default_text:
+                lines = default_text.split('\n')
+                if len(lines) >= 2:
+                    job_data['company'] = lines[0].strip()
+                    job_data['title'] = lines[1].strip()
+                elif lines:
+                    job_data['title'] = lines[0].strip()
+            
+            company_selectors = [
+                '[class*="company"] a',
+                '[class*="company"]',
+                '[class*="employer"]',
+                'span[class*="name"]',
+            ]
+            
+            for selector in company_selectors:
+                try:
+                    company_elem = await self.page.query_selector(selector)
+                    if company_elem:
+                        company_text = await company_elem.inner_text()
+                        if company_text and len(company_text) > 1 and len(company_text) < 100:
+                            job_data['company'] = company_text.strip()
+                            break
+                except Exception:
+                    continue
+            
+            if not job_data['company'] and default_text:
+                lines = default_text.split('\n')
+                if lines:
+                    job_data['company'] = lines[0].strip()
+            
+            if not job_data['company']:
+                company_match = re.search(r'(?:at|@|with|by)\s+([A-Z][^\n\r,|]+?)(?:,|\n|\||$| at | @ )', page_text, re.IGNORECASE)
+                if company_match:
+                    job_data['company'] = company_match.group(1).strip()
+            
+            location_patterns = [
+                r'(?:Location|地点|位置)\s*[:：\s]+([^\n\r，。,，\d]+?)(?:\n|\r|,|$)',
+            ]
+            
+            for pattern in location_patterns:
+                match = re.search(pattern, page_text, re.IGNORECASE)
+                if match:
+                    location = match.group(1).strip()
+                    if location and len(location) < 100 and 'job' not in location.lower():
+                        job_data['location'] = location
+                        break
+            
+            if not job_data['location']:
+                keywords = ['Anywhere', 'Worldwide', 'Global']
+                for keyword in keywords:
+                    if re.search(r'\b' + re.escape(keyword) + r'\b', page_text, re.IGNORECASE):
+                        job_data['location'] = keyword
+                        break
+            
+            if not job_data['location']:
+                job_data['location'] = 'Remote'
+            
+            salary_patterns = [
+                r'(?:Salary|薪资|Pay|Compensation|Rate)\s*[:：\s]+\$?([\d,\s\-\+Kk$€£]+?)(?:\n|\r|,|$)',
+                r'\$([\d,\s\-\+Kk]+)\s*(?:per|/)\s*(?:year|month|hour)',
+            ]
+            
+            for pattern in salary_patterns:
+                match = re.search(pattern, page_text, re.IGNORECASE)
+                if match:
+                    job_data['salary'] = match.group(1).strip()
+                    break
+            
+            description_selectors = [
+                '[class*="description"]',
+                '[class*="job-description"]',
+                '[class*="content"]',
+                'main',
+            ]
+            
+            for selector in description_selectors:
+                try:
+                    desc_elem = await self.page.query_selector(selector)
+                    if desc_elem:
+                        desc_html = await desc_elem.inner_html()
+                        job_data['description'] = self._clean_description(desc_html)
+                        if len(job_data['description']) > 50:
+                            break
+                except Exception:
+                    continue
+            
+            if not job_data['description']:
+                job_data['description'] = self._clean_description(page_text)
+            
+            tags = []
+            tag_keywords = ['JavaScript', 'Python', 'React', 'Vue', 'Angular', 'Node', 'TypeScript',
+                           'Java', 'Go', 'Rust', 'Ruby', 'PHP', 'Swift', 'Kotlin', 'Flutter',
+                           'AWS', 'GCP', 'Azure', 'DevOps', 'Docker', 'Kubernetes',
+                           'Remote', 'Full-time', 'Part-time', 'Contract', 'Senior', 'Junior', 'Mid']
+            
+            for keyword in tag_keywords:
+                if re.search(r'\b' + re.escape(keyword) + r'\b', page_text, re.IGNORECASE):
+                    tags.append(keyword)
+            
+            if tags:
+                job_data['tags'] = ', '.join(tags)
+            
+            date_patterns = [
+                r'(\d+)\s*(days?|hours?|weeks?|months?)\s+ago',
+                r'Posted\s+(\d+)\s*(days?|hours?|weeks?|months?)',
+            ]
+            
+            for pattern in date_patterns:
+                match = re.search(pattern, page_text, re.IGNORECASE)
+                if match:
+                    count = int(match.group(1))
+                    unit = match.group(2).lower()
+                    job_data['posted_at'] = self._parse_date(f"{count} {unit} ago")
+                    break
+            
+            return job_data
+            
         except Exception as e:
+            print(f"  [JustRemote] 获取职位详情出错: {e}")
+            import traceback
+            traceback.print_exc()
             return None
     
     def _extract_job_id(self, url: str) -> Optional[str]:
@@ -139,124 +317,78 @@ class JustRemoteSpider:
             return None
         
         patterns = [
-            r'/remote-jobs/([^/\?]+)',
-            r'/job/([^/\?]+)',
-            r'/jobs/([^/\?]+)',
+            r'/remote-[^/]+-jobs/([^/\?\#]+)',
+            r'/job/([^/\?\#]+)',
+            r'/jobs/([^/\?\#]+)',
         ]
         
         for pattern in patterns:
             match = re.search(pattern, url)
             if match:
-                return f"jrm_{match.group(1)}"
+                slug = match.group(1)
+                if slug and len(slug) > 3 and '?' not in slug and '#' not in slug:
+                    return f"jrm_{hashlib.md5(slug.encode()).hexdigest()[:12]}"
         
         if url:
-            import hashlib
             return f"jrm_{hashlib.md5(url.encode()).hexdigest()[:12]}"
         
         return None
     
-    def _clean_description(self, html_text: str) -> str:
-        if not html_text:
-            return ""
-        
-        try:
-            soup = BeautifulSoup(html_text, 'lxml')
-            
-            for br in soup.find_all('br'):
-                br.replace_with('\n')
-            for p in soup.find_all('p'):
-                p.append('\n\n')
-            for li in soup.find_all('li'):
-                li.insert_before('• ')
-                li.append('\n')
-            
-            text = soup.get_text()
-            lines = text.split('\n')
-            cleaned_lines = []
-            for line in lines:
-                stripped = line.strip()
-                if stripped:
-                    cleaned_lines.append(stripped)
-            
-            return '\n'.join(cleaned_lines)
-        except Exception:
-            return html_text
-    
-    def _parse_date(self, date_str: str) -> Optional[datetime]:
-        if not date_str:
+    def _create_job_listing(self, job_data: Dict[str, Any]) -> Optional[JobListing]:
+        if not job_data:
             return None
         
         try:
-            from email.utils import parsedate_to_datetime
-            return parsedate_to_datetime(date_str)
-        except Exception:
-            try:
-                from dateutil import parser
-                return parser.parse(date_str, fuzzy=True)
-            except Exception:
+            title = job_data.get('title', '')
+            if not title:
                 return None
+            
+            company = job_data.get('company', '')
+            if not company:
+                name_match = re.search(r'([A-Z][a-zA-Z0-9\s\-&]+?)(?:\s+(?:is|at|for|hiring|looking|seeking))', title, re.IGNORECASE)
+                if name_match:
+                    company = name_match.group(1).strip()
+            
+            tags = job_data.get('tags', '')
+            if not tags:
+                tags = 'remote, justremote'
+            
+            return JobListing(
+                source=self.SOURCE,
+                job_id=job_data.get('job_id', ''),
+                title=title,
+                company=company,
+                description=job_data.get('description', ''),
+                location=job_data.get('location', 'Remote'),
+                salary=job_data.get('salary', ''),
+                job_url=job_data.get('job_url', ''),
+                posted_at=job_data.get('posted_at'),
+                tags=tags,
+            )
+        except Exception as e:
+            return None
     
     def crawl(self, categories: List[str] = None, max_jobs: int = 100,
               existing_ids: set = None, stop_after_duplicates: int = 5) -> List[JobListing]:
-        all_jobs = []
-        seen_ids = set()
-        existing_ids = existing_ids or set()
-        consecutive_duplicates = 0
-        
-        urls_to_try = [
-            self.RSS_URL,
-        ]
-        
-        if categories and categories != ['all']:
-            for cat in categories:
-                urls_to_try.append(f"{self.BASE_URL}/remote-jobs/{cat}/rss")
-        
-        for url in urls_to_try:
-            if len(all_jobs) >= max_jobs:
-                break
-            
+        try:
             try:
-                xml_content = self.fetch_rss(url)
-                jobs = self.parse_rss(xml_content)
-                
-                for job_data in jobs:
-                    if len(all_jobs) >= max_jobs:
-                        break
-                    
-                    job_id = job_data.get('job_id', '')
-                    if not job_id or job_id in seen_ids:
-                        continue
-                    seen_ids.add(job_id)
-                    
-                    if job_id in existing_ids:
-                        consecutive_duplicates += 1
-                        if consecutive_duplicates >= stop_after_duplicates:
-                            print(f"  [JustRemote] 遇到连续 {consecutive_duplicates} 个已存在职位，停止爬取")
-                            return all_jobs
-                        continue
-                    
-                    consecutive_duplicates = 0
-                    tags = job_data.get('tags', '')
-                    
-                    job_listing = JobListing(
-                        source=self.SOURCE,
-                        job_id=job_id,
-                        title=job_data.get('title', ''),
-                        company=job_data.get('company', ''),
-                        description=job_data.get('description', ''),
-                        location=job_data.get('location', 'Remote'),
-                        salary=job_data.get('salary', ''),
-                        job_url=job_data.get('job_url', ''),
-                        posted_at=job_data.get('posted_at'),
-                        tags=tags if tags else 'remote, justremote',
-                    )
-                    
-                    all_jobs.append(job_listing)
-                    
-            except Exception as e:
-                continue
-        
-        return all_jobs
+                loop = asyncio.get_running_loop()
+                import nest_asyncio
+                nest_asyncio.apply()
+            except RuntimeError:
+                pass
+            
+            return asyncio.run(self._crawl_async(
+                categories=categories,
+                max_jobs=max_jobs,
+                existing_ids=existing_ids,
+                stop_after_duplicates=stop_after_duplicates
+            ))
+        except Exception as e:
+            print(f"  [JustRemote] Playwright 爬虫出错: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
     
     def close(self):
-        self.session.close()
+        pass
