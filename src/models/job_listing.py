@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 
 @dataclass
@@ -22,6 +22,10 @@ class JobListing:
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     
+    categories: str = ""
+    tech_stacks: str = ""
+    seniority: str = ""
+    
     def to_dict(self):
         return {
             'id': self.id,
@@ -40,6 +44,9 @@ class JobListing:
             'posted_at': self.posted_at.isoformat() if self.posted_at else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'categories': self.categories,
+            'tech_stacks': self.tech_stacks,
+            'seniority': self.seniority,
         }
     
     @classmethod
@@ -61,4 +68,27 @@ class JobListing:
             posted_at=datetime.fromisoformat(data['posted_at']) if data.get('posted_at') else None,
             created_at=datetime.fromisoformat(data['created_at']) if data.get('created_at') else None,
             updated_at=datetime.fromisoformat(data['updated_at']) if data.get('updated_at') else None,
+            categories=data.get('categories', ''),
+            tech_stacks=data.get('tech_stacks', ''),
+            seniority=data.get('seniority', ''),
         )
+    
+    def auto_classify(self):
+        from src.classifier import job_classifier
+        classified = job_classifier.classify(
+            title=self.title,
+            description=self.description,
+            location=self.location
+        )
+        self.categories = ', '.join(classified.get('categories', []))
+        self.tech_stacks = ', '.join(classified.get('tech_stacks', []))
+        self.seniority = ', '.join(classified.get('seniority', []))
+    
+    def get_categories_list(self) -> List[str]:
+        return [t.strip() for t in self.categories.split(',') if t.strip()]
+    
+    def get_tech_stacks_list(self) -> List[str]:
+        return [t.strip() for t in self.tech_stacks.split(',') if t.strip()]
+    
+    def get_seniority_list(self) -> List[str]:
+        return [t.strip() for t in self.seniority.split(',') if t.strip()]

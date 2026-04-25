@@ -15,6 +15,9 @@ export interface Job {
   posted_at: string | null;
   created_at: string | null;
   updated_at: string | null;
+  categories: string;
+  tech_stacks: string;
+  seniority: string;
 }
 
 export interface JobListResponse {
@@ -32,6 +35,9 @@ export interface StatsResponse {
   by_source: Record<string, number>;
   sources: string[];
   job_types: string[];
+  categories: string[];
+  tech_stacks: string[];
+  seniority_levels: string[];
   latest_update: string | null;
 }
 
@@ -39,6 +45,9 @@ export interface FilterOptions {
   sources: string[];
   job_types: string[];
   locations: string[];
+  categories: string[];
+  tech_stacks: string[];
+  seniority_levels: string[];
   date_ranges: Record<string, string>;
 }
 
