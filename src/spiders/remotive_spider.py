@@ -39,7 +39,7 @@ class RemotiveSpider:
         if limit:
             params['limit'] = limit
         
-        response = self.session.get(self.API_URL, params=params)
+        response = self.session.get(self.API_URL, params=params, timeout=(10, 30))
         response.raise_for_status()
         return response.json()
     
@@ -95,9 +95,12 @@ class RemotiveSpider:
         except Exception as e:
             return None
     
-    def crawl(self, categories: List[str] = None, search: str = None, max_jobs: int = 100) -> List[JobListing]:
+    def crawl(self, categories: List[str] = None, search: str = None, max_jobs: int = 100,
+              existing_ids: set = None, stop_after_duplicates: int = 5) -> List[JobListing]:
         all_jobs = []
         seen_ids = set()
+        existing_ids = existing_ids or set()
+        consecutive_duplicates = 0
         
         target_categories = categories if categories and categories != ['all'] else ['all']
         
@@ -115,11 +118,21 @@ class RemotiveSpider:
                     if len(all_jobs) >= max_jobs:
                         break
                     
-                    job_id = str(job_data.get('id', ''))
+                    raw_id = str(job_data.get('id', ''))
+                    job_id = f"rm_{raw_id}" if raw_id else ""
+                    
                     if not job_id or job_id in seen_ids:
                         continue
                     seen_ids.add(job_id)
                     
+                    if job_id in existing_ids:
+                        consecutive_duplicates += 1
+                        if consecutive_duplicates >= stop_after_duplicates:
+                            print(f"  [Remotive] 遇到连续 {consecutive_duplicates} 个已存在职位，停止爬取")
+                            return all_jobs
+                        continue
+                    
+                    consecutive_duplicates = 0
                     job = self.parse_job(job_data)
                     if job:
                         all_jobs.append(job)

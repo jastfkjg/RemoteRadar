@@ -32,7 +32,7 @@ class WeworkSpider:
     
     def fetch_page(self, url: str) -> str:
         time.sleep(self.delay)
-        response = self.session.get(url)
+        response = self.session.get(url, timeout=(10, 30))
         response.raise_for_status()
         return response.text
     
@@ -138,9 +138,13 @@ class WeworkSpider:
         
         return result
     
-    def crawl(self, use_rss: bool = True, fetch_details: bool = False, categories: List[str] = None) -> List[JobListing]:
+    def crawl(self, use_rss: bool = True, fetch_details: bool = False, 
+              categories: List[str] = None, existing_ids: set = None, 
+              stop_after_duplicates: int = 5) -> List[JobListing]:
         all_jobs = []
         seen_ids = set()
+        existing_ids = existing_ids or set()
+        consecutive_duplicates = 0
         
         if use_rss:
             try:
@@ -153,6 +157,14 @@ class WeworkSpider:
                         continue
                     seen_ids.add(job_id)
                     
+                    if job_id in existing_ids:
+                        consecutive_duplicates += 1
+                        if consecutive_duplicates >= stop_after_duplicates:
+                            print(f"  [Wework] 遇到连续 {consecutive_duplicates} 个已存在职位，停止爬取")
+                            return all_jobs
+                        continue
+                    
+                    consecutive_duplicates = 0
                     company = job_data.get('company', '')
                     description = job_data.get('description', '')
                     
@@ -202,6 +214,14 @@ class WeworkSpider:
                                 continue
                             seen_ids.add(job_id)
                             
+                            if job_id in existing_ids:
+                                consecutive_duplicates += 1
+                                if consecutive_duplicates >= stop_after_duplicates:
+                                    print(f"  [Wework] 遇到连续 {consecutive_duplicates} 个已存在职位，停止爬取")
+                                    return all_jobs
+                                continue
+                            
+                            consecutive_duplicates = 0
                             job_data['category'] = category
                             
                             company = job_data.get('company', '')

@@ -42,7 +42,7 @@ class StackOverflowSpider:
         if search:
             params['q'] = search
         
-        response = self.session.get(self.RSS_URL, params=params)
+        response = self.session.get(self.RSS_URL, params=params, timeout=(10, 30))
         response.raise_for_status()
         return response.text
     
@@ -180,9 +180,12 @@ class StackOverflowSpider:
             except Exception:
                 return None
     
-    def crawl(self, categories: List[str] = None, search: str = None, max_jobs: int = 100) -> List[JobListing]:
+    def crawl(self, categories: List[str] = None, search: str = None, max_jobs: int = 100,
+              existing_ids: set = None, stop_after_duplicates: int = 5) -> List[JobListing]:
         all_jobs = []
         seen_ids = set()
+        existing_ids = existing_ids or set()
+        consecutive_duplicates = 0
         
         target_categories = categories if categories and categories != ['all'] else ['all']
         
@@ -206,6 +209,14 @@ class StackOverflowSpider:
                         continue
                     seen_ids.add(job.job_id)
                     
+                    if job.job_id in existing_ids:
+                        consecutive_duplicates += 1
+                        if consecutive_duplicates >= stop_after_duplicates:
+                            print(f"  [StackOverflow] 遇到连续 {consecutive_duplicates} 个已存在职位，停止爬取")
+                            return all_jobs
+                        continue
+                    
+                    consecutive_duplicates = 0
                     all_jobs.append(job)
                     
             except Exception as e:

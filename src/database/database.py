@@ -176,6 +176,12 @@ class Database:
             cursor.execute('SELECT DISTINCT source FROM job_listings')
             return [row[0] for row in cursor.fetchall()]
     
+    def get_existing_job_ids(self, source: str) -> set:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT job_id FROM job_listings WHERE source=?', (source,))
+            return {row[0] for row in cursor.fetchall()}
+    
     def get_categories(self) -> List[str]:
         with self.get_connection() as conn:
             cursor = conn.cursor()

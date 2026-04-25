@@ -33,7 +33,7 @@ class WorkingNomadsSpider:
     
     def fetch_page(self, url: str) -> str:
         time.sleep(self.delay)
-        response = self.session.get(url, allow_redirects=True)
+        response = self.session.get(url, allow_redirects=True, timeout=(10, 30))
         response.raise_for_status()
         response.encoding = 'utf-8'
         return response.text
@@ -239,9 +239,12 @@ class WorkingNomadsSpider:
             except Exception:
                 return None
     
-    def crawl(self, categories: List[str] = None, max_jobs: int = 100, use_rss: bool = True) -> List[JobListing]:
+    def crawl(self, categories: List[str] = None, max_jobs: int = 100, use_rss: bool = True,
+              existing_ids: set = None, stop_after_duplicates: int = 5) -> List[JobListing]:
         all_jobs = []
         seen_ids = set()
+        existing_ids = existing_ids or set()
+        consecutive_duplicates = 0
         
         if use_rss:
             try:
@@ -257,6 +260,14 @@ class WorkingNomadsSpider:
                         continue
                     seen_ids.add(job_id)
                     
+                    if job_id in existing_ids:
+                        consecutive_duplicates += 1
+                        if consecutive_duplicates >= stop_after_duplicates:
+                            print(f"  [WorkingNomads] 遇到连续 {consecutive_duplicates} 个已存在职位，停止爬取")
+                            return all_jobs
+                        continue
+                    
+                    consecutive_duplicates = 0
                     tags = job_data.get('tags', [])
                     tags_str = ', '.join(tags) if tags else ''
                     
@@ -292,6 +303,14 @@ class WorkingNomadsSpider:
                         continue
                     seen_ids.add(job_id)
                     
+                    if job_id in existing_ids:
+                        consecutive_duplicates += 1
+                        if consecutive_duplicates >= stop_after_duplicates:
+                            print(f"  [WorkingNomads] 遇到连续 {consecutive_duplicates} 个已存在职位，停止爬取")
+                            return all_jobs
+                        continue
+                    
+                    consecutive_duplicates = 0
                     tags = job_data.get('tags', [])
                     tags_str = ', '.join(tags) if tags else ''
                     
