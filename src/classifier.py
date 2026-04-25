@@ -1,390 +1,503 @@
 import re
-from typing import Dict, List, Set
+from typing import Dict, List, Set, Optional
 
 
-STANDARD_CATEGORIES = {
+ROLE_KEYWORDS = {
     "frontend": {
         "name": "前端开发",
-        "keywords": [
-            "前端", "frontend", "front-end", "前端开发", "ui开发",
-            "react", "vue", "angular", "next.js", "nuxt",
-            "javascript", "typescript", "js", "ts",
-            "html", "css", "sass", "less", "tailwind",
-            "webpack", "vite", "css", "移动端h5", "h5开发"
+        "patterns": [
+            r"\b前端开发工程师\b", r"\b前端工程师\b", r"\b前端开发\b", 
+            r"\bui开发工程师\b", r"\bui工程师\b", r"\bh5开发\b",
+            r"\bFrontend Developer\b", r"\bFrontend Engineer\b", 
+            r"\bFront-end Developer\b", r"\bFront-end Engineer\b",
+            r"\bFront End Developer\b", r"\bFront End Engineer\b",
+            r"\bUI Developer\b", r"\bUI Engineer\b",
         ],
+        "tech_hints": ["react", "vue", "angular", "next.js", "typescript", "javascript"],
     },
     "backend": {
         "name": "后端开发",
-        "keywords": [
-            "后端", "backend", "back-end", "后端开发", "服务端", "服务器端",
-            "python", "java", "go", "golang", "rust", "php", "ruby", "c#",
-            "django", "flask", "fastapi", "spring", "laravel", "rails",
-            "node", "nodejs", "express", "nest",
-            "api开发", "接口开发", "中间件", "微服务"
+        "patterns": [
+            r"\b后端开发工程师\b", r"\b后端工程师\b", r"\b后端开发\b",
+            r"\b服务端开发\b", r"\b服务器端开发\b", r"\b接口开发\b",
+            r"\bBackend Developer\b", r"\bBackend Engineer\b",
+            r"\bBack-end Developer\b", r"\bBack-end Engineer\b",
+            r"\bBack End Developer\b", r"\bBack End Engineer\b",
+            r"\bServer Developer\b", r"\bAPI Developer\b",
         ],
+        "tech_hints": ["python", "java", "golang", "rust", "php", "ruby", "node.js"],
     },
     "fullstack": {
         "name": "全栈开发",
-        "keywords": [
-            "全栈", "fullstack", "full stack", "full-stack",
-            "全栈工程师", "前后端"
+        "patterns": [
+            r"\b全栈开发工程师\b", r"\b全栈工程师\b", r"\b全栈开发\b", r"\b全栈\b",
+            r"\b前后端开发\b",
+            r"\bFull Stack Developer\b", r"\bFull-Stack Developer\b",
+            r"\bFull Stack Engineer\b", r"\bFull-Stack Engineer\b",
+            r"\bFullstack Developer\b",
         ],
+        "tech_hints": [],
     },
     "mobile": {
         "name": "移动开发",
-        "keywords": [
-            "移动端", "移动开发", "ios", "android", "安卓", "苹果",
-            "react native", "flutter", "rn", "跨端", "移动端开发",
-            "swift", "kotlin", "objective-c", "xamarin", "uni-app"
+        "patterns": [
+            r"\b移动端开发工程师\b", r"\b移动端工程师\b", r"\b移动开发\b", r"\b移动端\b",
+            r"\bios开发工程师\b", r"\bandroid开发工程师\b",
+            r"\bMobile Developer\b", r"\bMobile Engineer\b",
+            r"\biOS Developer\b", r"\biOS Engineer\b",
+            r"\bAndroid Developer\b", r"\bAndroid Engineer\b",
         ],
+        "tech_hints": ["ios", "android", "swift", "kotlin", "flutter", "react native"],
     },
     "devops": {
         "name": "运维/DevOps",
-        "keywords": [
-            "运维", "devops", "sre", "site reliability", "运维工程师",
-            "docker", "kubernetes", "k8s", "容器", "云原生",
-            "aws", "gcp", "azure", "阿里云", "腾讯云", "云服务",
-            "terraform", "ansible", "ci/cd", "jenkins", "github actions",
-            "nginx", "监控", "部署", "服务器运维", "系统运维"
+        "patterns": [
+            r"\b运维工程师\b", r"\bdevops工程师\b", r"\bsre工程师\b",
+            r"\b系统运维\b", r"\b服务器运维\b", r"\b云原生\b",
+            r"\bDevOps Engineer\b", r"\bSRE Engineer\b",
+            r"\bSite Reliability Engineer\b", r"\bOperations Engineer\b",
+            r"\bInfrastructure Engineer\b", r"\bCloud Engineer\b",
+            r"\bPlatform Engineer\b",
         ],
+        "tech_hints": ["docker", "kubernetes", "k8s", "aws", "gcp", "azure", "terraform"],
     },
     "design": {
         "name": "设计",
-        "keywords": [
-            "设计", "designer", "ui", "ux", "ui/ux", "视觉设计",
-            "产品设计", "交互设计", "设计师", "平面设计", "figma",
-            "sketch", "adobe xd", "photoshop", "ps", "ui设计"
+        "patterns": [
+            r"\b设计师\b", r"\bui设计师\b", r"\bux设计师\b",
+            r"\b产品设计师\b", r"\b交互设计师\b", r"\b视觉设计师\b",
+            r"\bDesigner\b", r"\bUI Designer\b", r"\bUX Designer\b",
+            r"\bProduct Designer\b", r"\bVisual Designer\b",
+            r"\bInteraction Designer\b",
         ],
+        "tech_hints": ["figma", "sketch", "photoshop", "adobe xd"],
     },
     "product": {
         "name": "产品",
-        "keywords": [
-            "产品经理", "product manager", "pm", "产品策划", "产品运营",
-            "产品设计师", "需求分析", "产品岗"
+        "patterns": [
+            r"\b产品经理\b", r"\b产品策划\b", r"\b产品运营\b",
+            r"\bProduct Manager\b", r"\bPM\b", r"\bProduct Owner\b",
         ],
+        "tech_hints": [],
     },
     "data": {
         "name": "数据/AI",
-        "keywords": [
-            "数据", "data", "数据分析", "数据工程师", "数据分析师",
-            "ai", "ml", "机器学习", "machine learning", "深度学习",
-            "nlp", "计算机视觉", "cv", "算法", "算法工程师",
-            "pytorch", "tensorflow", "langchain", "llm", "大模型",
-            "数据科学", "data science", "数据挖掘"
+        "patterns": [
+            r"\b数据工程师\b", r"\b数据分析师\b", r"\b算法工程师\b",
+            r"\bai工程师\b", r"\b机器学习工程师\b", r"\b数据科学家\b",
+            r"\bData Engineer\b", r"\bData Analyst\b", r"\bData Scientist\b",
+            r"\bML Engineer\b", r"\bMachine Learning Engineer\b",
+            r"\bAI Engineer\b", r"\bAlgorithm Engineer\b",
         ],
+        "tech_hints": ["pytorch", "tensorflow", "langchain", "llm", "gpt", "机器学习", "深度学习"],
     },
     "testing": {
         "name": "测试",
-        "keywords": [
-            "测试", "qa", "quality assurance", "测试工程师", "测试开发",
-            "自动化测试", "功能测试", "接口测试", "性能测试",
-            "selenium", "appium", "pytest", "测试用例"
+        "patterns": [
+            r"\b测试工程师\b", r"\bqa工程师\b", r"\b测试开发工程师\b",
+            r"\b自动化测试\b", r"\b功能测试\b", r"\b接口测试\b",
+            r"\bTest Engineer\b", r"\bQA Engineer\b",
+            r"\bQuality Assurance Engineer\b", r"\bSDET\b",
+            r"\bSoftware Developer in Test\b", r"\bAutomation Engineer\b",
         ],
+        "tech_hints": ["selenium", "appium", "pytest", "cypress"],
     },
     "security": {
         "name": "安全",
-        "keywords": [
-            "安全", "security", "信息安全", "网络安全", "渗透测试",
-            "安全工程师", "安全研究员", "漏洞", "攻防", "cyber security"
+        "patterns": [
+            r"\b安全工程师\b", r"\b安全研究员\b", r"\b渗透测试工程师\b",
+            r"\b信息安全\b", r"\b网络安全\b",
+            r"\bSecurity Engineer\b", r"\bSecurity Researcher\b",
+            r"\bPenetration Tester\b", r"\bInformation Security\b",
+            r"\bCyber Security\b",
         ],
+        "tech_hints": [],
     },
     "marketing": {
         "name": "营销/运营",
-        "keywords": [
-            "营销", "marketing", "运营", "市场", "增长", "growth",
-            "品牌", "brand", "内容运营", "用户运营", "活动运营",
-            "seo", "sem", "社交媒体", "social media", "新媒体"
+        "patterns": [
+            r"\b营销经理\b", r"\b市场经理\b", r"\b运营经理\b",
+            r"\b内容运营\b", r"\b用户运营\b", r"\b活动运营\b",
+            r"\b新媒体运营\b", r"\b增长\b", r"\bseo\b", r"\bsem\b",
+            r"\bMarketing Manager\b", r"\bMarketing Specialist\b",
+            r"\bGrowth Hacker\b", r"\bBrand Manager\b",
         ],
+        "tech_hints": [],
     },
     "writing": {
         "name": "内容/写作",
-        "keywords": [
-            "写作", "writer", "编辑", "editor", "内容", "content",
-            "文案", "文案策划", "内容创作", "技术写作", "技术文档"
+        "patterns": [
+            r"\b内容编辑\b", r"\b文案策划\b", r"\b技术写作\b",
+            r"\bContent Writer\b", r"\bTechnical Writer\b",
+            r"\bCopywriter\b", r"\bEditor\b",
         ],
+        "tech_hints": [],
     },
     "support": {
         "name": "客服/支持",
-        "keywords": [
-            "客服", "customer support", "客户支持", "客户成功",
-            "customer success", "技术支持", "技术客服", "售后"
+        "patterns": [
+            r"\b客户支持\b", r"\b技术支持\b", r"\b客服专员\b",
+            r"\bCustomer Support\b", r"\bTechnical Support\b",
+            r"\bSupport Engineer\b", r"\bCustomer Success\b",
         ],
+        "tech_hints": [],
     },
     "sales": {
         "name": "销售",
-        "keywords": [
-            "销售", "sales", "客户经理", "商务", "bd", "business development",
-            "销售经理", "销售代表", "渠道销售"
+        "patterns": [
+            r"\b销售经理\b", r"\b销售代表\b", r"\b客户经理\b",
+            r"\b商务拓展\b", r"\bbd\b", r"\b销售工程师\b",
+            r"\bSales Manager\b", r"\bSales Representative\b",
+            r"\bAccount Executive\b", r"\bBusiness Development\b",
+            r"\bSales Engineer\b",
         ],
+        "tech_hints": [],
     },
     "management": {
         "name": "管理",
-        "keywords": [
-            "经理", "manager", "总监", "director", "负责人", "lead",
-            "cto", "技术负责人", "团队负责人", "vp", "合伙人",
-            "founder", "联合创始人"
+        "patterns": [
+            r"\b技术负责人\b", r"\b团队负责人\b", r"\b技术经理\b",
+            r"\b工程经理\b", r"\b技术总监\b", r"\bcto\b", r"\b架构师\b",
+            r"\bTech Lead\b", r"\bTeam Lead\b", r"\bEngineering Manager\b",
+            r"\bTechnical Manager\b", r"\bDirector\b", r"\bVP of Engineering\b",
+            r"\bCTO\b", r"\bArchitect\b",
+        ],
+        "tech_hints": [],
+    },
+}
+
+
+TECH_STACK_PATTERNS = {
+    "python": {
+        "name": "Python",
+        "patterns": [
+            r"\bPython\b", r"\bDjango\b", r"\bFlask\b", r"\bFastAPI\b",
+            r"\bPyramid\b", r"\bTornado\b", r"\bScrapy\b",
+        ],
+    },
+    "javascript": {
+        "name": "JavaScript",
+        "patterns": [
+            r"\bJavaScript\b", r"\bJS\b", r"\bTypeScript\b", r"\bTS\b",
+            r"\bNode\.js\b", r"\bNodeJS\b", r"\bNode\b",
+            r"\bES6\b", r"\bES5\b",
+        ],
+    },
+    "react": {
+        "name": "React",
+        "patterns": [
+            r"\bReact\b", r"\bReact\.js\b", r"\bReactJS\b",
+            r"\bNext\.js\b", r"\bNextJS\b", r"\bGatsby\b",
+            r"\bReact Native\b", r"\bRN\b",
+        ],
+    },
+    "vue": {
+        "name": "Vue",
+        "patterns": [
+            r"\bVue\b", r"\bVue\.js\b", r"\bVueJS\b",
+            r"\bNuxt\b", r"\bNuxt\.js\b", r"\bNuxtJS\b",
+        ],
+    },
+    "java": {
+        "name": "Java",
+        "patterns": [
+            r"\bJava\b", r"\bSpring\b", r"\bSpring Boot\b", r"\bSpringBoot\b",
+            r"\bJVM\b", r"\bKotlin\b", r"\bGrails\b",
+        ],
+    },
+    "golang": {
+        "name": "Go",
+        "patterns": [
+            r"\bGo\b", r"\bGolang\b", r"\bGoLang\b",
+            r"\bGin\b", r"\bEcho\b", r"\bGoFrame\b",
+        ],
+    },
+    "rust": {
+        "name": "Rust",
+        "patterns": [
+            r"\bRust\b", r"\bRustlang\b", r"\bRustLang\b",
+            r"\bActix\b", r"\bRocket\b",
+        ],
+    },
+    "php": {
+        "name": "PHP",
+        "patterns": [
+            r"\bPHP\b", r"\bLaravel\b", r"\bSymfony\b",
+            r"\bThinkPHP\b", r"\bYii\b", r"\bCodeIgniter\b",
+        ],
+    },
+    "ruby": {
+        "name": "Ruby",
+        "patterns": [
+            r"\bRuby\b", r"\bRails\b", r"\bRuby on Rails\b",
+            r"\bRoR\b", r"\bSinatra\b",
+        ],
+    },
+    "csharp": {
+        "name": "C#",
+        "patterns": [
+            r"\bC#\b", r"\b\.NET\b", r"\.NET Core\b", r"\.NET Framework\b",
+            r"\bASP\.NET\b", r"\bEntity Framework\b",
+        ],
+    },
+    "swift": {
+        "name": "Swift",
+        "patterns": [
+            r"\bSwift\b", r"\bObjective-C\b", r"\bObjC\b",
+            r"\bUIKit\b", r"\bSwiftUI\b",
+        ],
+    },
+    "kotlin": {
+        "name": "Kotlin",
+        "patterns": [
+            r"\bKotlin\b", r"\bAndroid SDK\b",
+            r"\bJetpack Compose\b",
+        ],
+    },
+    "flutter": {
+        "name": "Flutter",
+        "patterns": [
+            r"\bFlutter\b", r"\bDart\b",
+        ],
+    },
+    "devops_tools": {
+        "name": "DevOps",
+        "patterns": [
+            r"\bDocker\b", r"\bKubernetes\b", r"\bK8s\b",
+            r"\bAWS\b", r"\bGCP\b", r"\bAzure\b", r"\b阿里云\b", r"\b腾讯云\b",
+            r"\bTerraform\b", r"\bAnsible\b", r"\bCI/CD\b",
+            r"\bJenkins\b", r"\bGitHub Actions\b", r"\bGitLab CI\b",
+            r"\bNginx\b", r"\bRedis\b", r"\bElasticsearch\b",
+            r"\bKafka\b", r"\bRabbitMQ\b",
+        ],
+    },
+    "database": {
+        "name": "数据库",
+        "patterns": [
+            r"\bMySQL\b", r"\bPostgreSQL\b", r"\bPostgres\b",
+            r"\bMongoDB\b", r"\bMongo\b", r"\bRedis\b",
+            r"\bElasticsearch\b", r"\bSQL\b", r"\bNoSQL\b",
+            r"\bSQLite\b", r"\bOracle\b", r"\bSQL Server\b",
+            r"\bTiDB\b", r"\bPolarDB\b",
+        ],
+    },
+    "ai_ml": {
+        "name": "AI/ML",
+        "patterns": [
+            r"\bAI\b", r"\bML\b", r"\bMachine Learning\b", r"\bDeep Learning\b",
+            r"\bNLP\b", r"\bComputer Vision\b", r"\bCV\b",
+            r"\bLLM\b", r"\bGPT\b", r"\bTransformer\b",
+            r"\bPyTorch\b", r"\bTensorFlow\b", r"\bKeras\b",
+            r"\bLangChain\b", r"\bLangchain\b",
+            r"\b人工智能\b", r"\b大模型\b", r"\b机器学习\b", r"\b深度学习\b",
+            r"\b自然语言处理\b", r"\b计算机视觉\b",
+        ],
+    },
+    "frontend_tech": {
+        "name": "前端技术",
+        "patterns": [
+            r"\bHTML\b", r"\bCSS\b", r"\bSass\b", r"\bSCSS\b", r"\bLess\b",
+            r"\bTailwind\b", r"\bTailwindCSS\b",
+            r"\bWebpack\b", r"\bVite\b", r"\bRollup\b", r"\bParcel\b",
+            r"\bAngular\b", r"\bEmber\b", r"\bSvelte\b",
+            r"\bjQuery\b", r"\bBootstrap\b",
         ],
     },
 }
 
-TECH_STACKS = {
-    "python": {
-        "name": "Python",
-        "keywords": ["python", "django", "flask", "fastapi", "pyramid", "tornado", "scrapy"],
-    },
-    "javascript": {
-        "name": "JavaScript",
-        "keywords": ["javascript", "js", "typescript", "ts", "node", "nodejs", "es6"],
-    },
-    "react": {
-        "name": "React",
-        "keywords": ["react", "reactjs", "next.js", "nextjs", "gatsby", "react native", "rn"],
-    },
-    "vue": {
-        "name": "Vue",
-        "keywords": ["vue", "vuejs", "nuxt", "nuxtjs", "vite"],
-    },
-    "java": {
-        "name": "Java",
-        "keywords": ["java", "spring", "spring boot", "springboot", "jvm", "kotlin"],
-    },
-    "go": {
-        "name": "Go",
-        "keywords": ["golang", " go ", "go语言", "gin", "echo", "goframe"],
-    },
-    "rust": {
-        "name": "Rust",
-        "keywords": ["rust", "rustlang"],
-    },
-    "php": {
-        "name": "PHP",
-        "keywords": ["php", "laravel", "symfony", "thinkphp", "yii"],
-    },
-    "ruby": {
-        "name": "Ruby",
-        "keywords": ["ruby", "rails", "ruby on rails", "ror"],
-    },
-    "csharp": {
-        "name": "C#",
-        "keywords": ["c#", ".net", "dotnet", "asp.net"],
-    },
-    "typescript": {
-        "name": "TypeScript",
-        "keywords": ["typescript", "ts"],
-    },
-    "swift": {
-        "name": "Swift",
-        "keywords": ["swift", "ios开发"],
-    },
-    "kotlin": {
-        "name": "Kotlin",
-        "keywords": ["kotlin", "android开发"],
-    },
-    "flutter": {
-        "name": "Flutter",
-        "keywords": ["flutter", "dart"],
-    },
-    "docker": {
-        "name": "Docker",
-        "keywords": ["docker", "container", "容器"],
-    },
-    "kubernetes": {
-        "name": "Kubernetes",
-        "keywords": ["kubernetes", "k8s", "k3s"],
-    },
-    "aws": {
-        "name": "AWS",
-        "keywords": ["aws", "amazon web services", "ec2", "s3"],
-    },
-    "database": {
-        "name": "数据库",
-        "keywords": ["mysql", "postgres", "postgresql", "mongodb", "mongo", "redis",
-                     "elasticsearch", "sql", "nosql", "sqlite", "oracle", "sql server",
-                     "tidb", "polarDB", "tdsql"],
-    },
-    "ai": {
-        "name": "AI/ML",
-        "keywords": ["ai", "artificial intelligence", "ml", "machine learning",
-                     "深度学习", "deep learning", "nlp", "计算机视觉", "cv",
-                     "llm", "gpt", "transformer", "pytorch", "tensorflow",
-                     "langchain", "人工智能", "大模型", "算法", "机器学习"],
-    },
-}
 
-SENIORITY_LEVELS = {
+SENIORITY_PATTERNS = {
     "intern": {
         "name": "实习",
-        "keywords": ["intern", "实习", "internship", "trainee", "在校生", "应届生"],
+        "patterns": [
+            r"\bIntern\b", r"\bInternship\b", r"\bTrainee\b",
+            r"\b实习\b", r"\b在校生\b", r"\b应届生\b", r"\b应届毕业生\b",
+        ],
     },
     "junior": {
         "name": "初级",
-        "keywords": ["junior", "初级", "entry level", "入门", "刚毕业", "1-3年", "1-2年"],
+        "patterns": [
+            r"\bJunior\b", r"\bEntry Level\b", r"\bEntry-Level\b",
+            r"\b初级\b", r"\b入门\b", r"\b刚毕业\b",
+            r"\b1-3年\b", r"\b1-2年\b", r"\b1年经验\b", r"\b2年经验\b",
+        ],
     },
     "mid": {
         "name": "中级",
-        "keywords": ["mid", "中级", "mid-level", "3-5年", "3年", "4年", "5年", "资深"],
+        "patterns": [
+            r"\bMid\b", r"\bMid-level\b", r"\bMid Level\b",
+            r"\b中级\b", r"\b3-5年\b", r"\b3年经验\b", r"\b4年经验\b",
+            r"\b5年经验\b", r"\b资深\b",
+        ],
     },
     "senior": {
         "name": "高级",
-        "keywords": ["senior", "高级", "sr.", "5+ years", "5年以上", "专家", "高级工程师"],
+        "patterns": [
+            r"\bSenior\b", r"\bSr\.\b", r"\bSr\b",
+            r"\b5\+ years\b", r"\b5年以上\b", r"\b5-10年\b",
+            r"\b高级\b", r"\b专家\b", r"\b高级工程师\b",
+        ],
     },
     "lead": {
         "name": "负责人",
-        "keywords": ["lead", "leader", "负责人", "team lead", "技术负责人", "架构师", "architect"],
+        "patterns": [
+            r"\bLead\b", r"\bLeader\b", r"\bPrincipal\b", r"\bStaff\b",
+            r"\b负责人\b", r"\bTeam Lead\b", r"\bTech Lead\b",
+            r"\b技术负责人\b", r"\b架构师\b", r"\bArchitect\b",
+            r"\bManager\b", r"\b总监\b", r"\bCTO\b",
+        ],
     },
 }
 
 
 class JobClassifier:
     def __init__(self):
-        self._category_patterns: Dict[str, re.Pattern] = {}
-        self._tech_patterns: Dict[str, re.Pattern] = {}
-        self._seniority_patterns: Dict[str, re.Pattern] = {}
+        self._compile_patterns()
+    
+    def _compile_patterns(self):
+        self.role_patterns: Dict[str, List[re.Pattern]] = {}
+        for key, data in ROLE_KEYWORDS.items():
+            self.role_patterns[key] = [
+                re.compile(p, re.IGNORECASE) for p in data['patterns']
+            ]
         
-        for key, data in STANDARD_CATEGORIES.items():
-            pattern = '|'.join([re.escape(k) for k in data['keywords']])
-            self._category_patterns[key] = re.compile(pattern, re.IGNORECASE)
+        self.tech_patterns: Dict[str, List[re.Pattern]] = {}
+        for key, data in TECH_STACK_PATTERNS.items():
+            self.tech_patterns[key] = [
+                re.compile(p, re.IGNORECASE) for p in data['patterns']
+            ]
         
-        for key, data in TECH_STACKS.items():
-            pattern = '|'.join([re.escape(k) for k in data['keywords']])
-            self._tech_patterns[key] = re.compile(pattern, re.IGNORECASE)
-        
-        for key, data in SENIORITY_LEVELS.items():
-            pattern = '|'.join([re.escape(k) for k in data['keywords']])
-            self._seniority_patterns[key] = re.compile(pattern, re.IGNORECASE)
+        self.seniority_patterns: Dict[str, List[re.Pattern]] = {}
+        for key, data in SENIORITY_PATTERNS.items():
+            self.seniority_patterns[key] = [
+                re.compile(p, re.IGNORECASE) for p in data['patterns']
+            ]
     
     def classify(self, title: str, description: str = "", location: str = "") -> Dict[str, List[str]]:
-        combined_text = f"{title} {description} {location}".lower()
+        title_lower = title.lower() if title else ""
+        title_text = title or ""
+        
+        combined_text = f"{title} {description}"
         
         categories: Set[str] = set()
-        for key, pattern in self._category_patterns.items():
-            if pattern.search(combined_text):
-                categories.add(key)
+        for key, patterns in self.role_patterns.items():
+            for pattern in patterns:
+                if pattern.search(title_text):
+                    categories.add(ROLE_KEYWORDS[key]['name'])
+                    break
         
         if not categories:
-            inferred = self._infer_category_from_title(title)
-            categories.update(inferred)
+            categories = self._infer_role_from_tech(title_text, combined_text)
         
         tech_stacks: Set[str] = set()
-        for key, pattern in self._tech_patterns.items():
-            if pattern.search(combined_text):
-                tech_stacks.add(key)
-        
-        if not tech_stacks:
-            inferred_tech = self._infer_tech_from_title(title)
-            tech_stacks.update(inferred_tech)
+        for key, patterns in self.tech_patterns.items():
+            for pattern in patterns:
+                if pattern.search(combined_text):
+                    tech_stacks.add(TECH_STACK_PATTERNS[key]['name'])
+                    break
         
         seniority: Set[str] = set()
-        for key, pattern in self._seniority_patterns.items():
-            if pattern.search(combined_text):
-                seniority.add(key)
+        for key, patterns in self.seniority_patterns.items():
+            for pattern in patterns:
+                if pattern.search(title_text):
+                    seniority.add(SENIORITY_PATTERNS[key]['name'])
+                    break
+        
+        if not categories and not tech_stacks:
+            categories = self._infer_from_generic_terms(title_lower)
         
         return {
-            "categories": [STANDARD_CATEGORIES[k]["name"] for k in categories if k in STANDARD_CATEGORIES],
-            "tech_stacks": [TECH_STACKS[k]["name"] for k in tech_stacks if k in TECH_STACKS],
-            "seniority": [SENIORITY_LEVELS[k]["name"] for k in seniority if k in SENIORITY_LEVELS],
+            "categories": sorted(list(categories)),
+            "tech_stacks": sorted(list(tech_stacks)),
+            "seniority": sorted(list(seniority)),
         }
     
-    def _infer_category_from_title(self, title: str) -> Set[str]:
-        inferred: Set[str] = set()
+    def _infer_role_from_tech(self, title: str, combined: str) -> Set[str]:
+        categories: Set[str] = set()
+        
+        combined_lower = combined.lower()
         title_lower = title.lower()
         
-        if "前端" in title_lower or "front" in title_lower or "ui" in title_lower or "h5" in title_lower:
-            inferred.add("frontend")
+        frontend_patterns = [
+            r'\breact\b', r'\bvue\b', r'\bangular\b', r'\bnext\.js\b', r'\bnuxt\b', r'\bsvelte\b',
+            r'\bfrontend\b', r'\bui developer\b', r'\bh5\b', r'移动端h5'
+        ]
+        for pattern in frontend_patterns:
+            if re.search(pattern, title_lower) or re.search(pattern, combined_lower):
+                categories.add(ROLE_KEYWORDS['frontend']['name'])
+                break
         
-        if "后端" in title_lower or "back" in title_lower or "服务端" in title_lower or "server" in title_lower:
-            inferred.add("backend")
+        backend_patterns = [
+            r'\bpython\b', r'\bjava\b', r'\bgolang\b', r'\brust\b', r'\bphp\b', r'\bruby\b',
+            r'\bc#\b', r'\.net\b',
+            r'\bbackend\b', r'\bserver developer\b', r'\bapi developer\b',
+            r'\bdjango\b', r'\bspring\b', r'\bflask\b', r'\bfastapi\b', r'\blaravel\b', r'\brails\b',
+            r'\bgo\b',
+        ]
+        for pattern in backend_patterns:
+            if re.search(pattern, title_lower) or re.search(pattern, combined_lower):
+                categories.add(ROLE_KEYWORDS['backend']['name'])
+                break
         
-        if "全栈" in title_lower or "full stack" in title_lower or "fullstack" in title_lower:
-            inferred.add("fullstack")
+        mobile_patterns = [
+            r'\bios\b', r'\bandroid\b', r'\bswift\b', r'\bkotlin\b', r'\bflutter\b',
+            r'\breact native\b', r'\bmobile developer\b'
+        ]
+        for pattern in mobile_patterns:
+            if re.search(pattern, title_lower) or re.search(pattern, combined_lower):
+                categories.add(ROLE_KEYWORDS['mobile']['name'])
+                break
         
-        if "移动端" in title_lower or "移动开发" in title_lower or "ios" in title_lower or "android" in title_lower:
-            inferred.add("mobile")
+        devops_patterns = [
+            r'\bdevops\b', r'\bsre\b', r'\bkubernetes\b', r'\bk8s\b', r'\bdocker\b',
+            r'\bterraform\b', r'\baws\b', r'\bgcp\b', r'\bazure\b', r'云原生'
+        ]
+        for pattern in devops_patterns:
+            if re.search(pattern, title_lower) or re.search(pattern, combined_lower):
+                categories.add(ROLE_KEYWORDS['devops']['name'])
+                break
         
-        if "运维" in title_lower or "devops" in title_lower or "sre" in title_lower:
-            inferred.add("devops")
+        data_patterns = [
+            r'\bdata scientist\b', r'\bdata engineer\b', r'\bdata analyst\b',
+            r'机器学习', r'深度学习',
+            r'\bai\b', r'\bml\b', r'\bnlp\b',
+            r'\bpytorch\b', r'\btensorflow\b', r'\blangchain\b', r'\bllm\b',
+            r'算法工程师', r'数据工程师', r'数据分析师', r'\bcv\b',
+        ]
+        for pattern in data_patterns:
+            if re.search(pattern, title_lower) or re.search(pattern, combined_lower):
+                categories.add(ROLE_KEYWORDS['data']['name'])
+                break
         
-        if "设计" in title_lower or "designer" in title_lower or "ui" in title_lower or "ux" in title_lower:
-            inferred.add("design")
-        
-        if "产品经理" in title_lower or "pm" in title_lower or "产品策划" in title_lower:
-            inferred.add("product")
-        
-        if "数据" in title_lower or "算法" in title_lower or "ai" in title_lower or "ml" in title_lower:
-            inferred.add("data")
-        
-        if "测试" in title_lower or "qa" in title_lower:
-            inferred.add("testing")
-        
-        if "安全" in title_lower or "security" in title_lower:
-            inferred.add("security")
-        
-        if "运营" in title_lower or "营销" in title_lower or "市场" in title_lower:
-            inferred.add("marketing")
-        
-        if "经理" in title_lower or "总监" in title_lower or "负责人" in title_lower or "lead" in title_lower:
-            inferred.add("management")
-        
-        return inferred
+        return categories
     
-    def _infer_tech_from_title(self, title: str) -> Set[str]:
-        inferred: Set[str] = set()
-        title_lower = title.lower()
+    def _infer_from_generic_terms(self, title_lower: str) -> Set[str]:
+        categories: Set[str] = set()
         
-        if "python" in title_lower:
-            inferred.add("python")
+        generic_terms = {
+            'developer': ROLE_KEYWORDS['backend']['name'],
+            'engineer': ROLE_KEYWORDS['backend']['name'],
+            '工程师': ROLE_KEYWORDS['backend']['name'],
+            '开发工程师': ROLE_KEYWORDS['backend']['name'],
+            'software engineer': ROLE_KEYWORDS['backend']['name'],
+            'software developer': ROLE_KEYWORDS['backend']['name'],
+        }
         
-        if "java" in title_lower:
-            inferred.add("java")
+        for term, category in generic_terms.items():
+            if term in title_lower:
+                categories.add(category)
+                break
         
-        if "golang" in title_lower or " go " in title_lower:
-            inferred.add("go")
-        
-        if "rust" in title_lower:
-            inferred.add("rust")
-        
-        if "php" in title_lower:
-            inferred.add("php")
-        
-        if "react" in title_lower:
-            inferred.add("react")
-        
-        if "vue" in title_lower:
-            inferred.add("vue")
-        
-        if "javascript" in title_lower or "js" in title_lower or "typescript" in title_lower or "ts" in title_lower:
-            inferred.add("javascript")
-        
-        if "flutter" in title_lower:
-            inferred.add("flutter")
-        
-        if "ios" in title_lower:
-            inferred.add("swift")
-        
-        if "android" in title_lower:
-            inferred.add("kotlin")
-        
-        if "运维" in title_lower or "devops" in title_lower:
-            inferred.add("docker")
-            inferred.add("kubernetes")
-        
-        if "数据" in title_lower or "算法" in title_lower or "ai" in title_lower or "ml" in title_lower:
-            inferred.add("ai")
-            inferred.add("python")
-        
-        if "数据库" in title_lower or "dba" in title_lower:
-            inferred.add("database")
-        
-        return inferred
+        return categories
     
     def get_all_categories(self) -> Dict[str, str]:
-        return {k: v["name"] for k, v in STANDARD_CATEGORIES.items()}
+        return {k: v['name'] for k, v in ROLE_KEYWORDS.items()}
     
     def get_all_tech_stacks(self) -> Dict[str, str]:
-        return {k: v["name"] for k, v in TECH_STACKS.items()}
+        return {k: v['name'] for k, v in TECH_STACK_PATTERNS.items()}
     
     def get_all_seniority(self) -> Dict[str, str]:
-        return {k: v["name"] for k, v in SENIORITY_LEVELS.items()}
+        return {k: v['name'] for k, v in SENIORITY_PATTERNS.items()}
 
 
 job_classifier = JobClassifier()

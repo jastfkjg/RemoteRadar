@@ -23,7 +23,7 @@ interface FilterPanelProps {
 
 const sourceNames: Record<string, string> = {
   v2ex: 'V2EX',
-  wework: 'Wework Remotely',
+  weworkremotely: 'Wework Remotely',
   remoteok: 'RemoteOk',
 };
 
