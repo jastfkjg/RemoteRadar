@@ -10,6 +10,56 @@ from api.schemas import JobSchema
 class APIDatabaseService:
     def __init__(self, db_path: str = "jobs.db"):
         self.db_path = db_path
+        self._init_database_sync()
+    
+    def _init_database_sync(self):
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS job_listings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                source TEXT NOT NULL,
+                job_id TEXT NOT NULL,
+                title TEXT,
+                company TEXT,
+                company_url TEXT,
+                company_logo TEXT,
+                description TEXT,
+                location TEXT,
+                job_type TEXT,
+                salary TEXT,
+                tags TEXT,
+                job_url TEXT,
+                posted_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                categories TEXT,
+                tech_stacks TEXT,
+                seniority TEXT,
+                UNIQUE(source, job_id)
+            )
+        ''')
+        
+        cursor.execute("PRAGMA table_info(job_listings)")
+        columns = [row[1] for row in cursor.fetchall()]
+        
+        migrations = [
+            ('categories', 'TEXT'),
+            ('tech_stacks', 'TEXT'),
+            ('seniority', 'TEXT'),
+        ]
+        
+        for column, column_type in migrations:
+            if column not in columns:
+                try:
+                    cursor.execute(f'ALTER TABLE job_listings ADD COLUMN {column} {column_type}')
+                    print(f"数据库迁移: 添加列 {column}")
+                except Exception as e:
+                    print(f"数据库迁移警告: {e}")
+        
+        conn.commit()
+        conn.close()
     
     @asynccontextmanager
     async def get_connection(self):
