@@ -23,6 +23,7 @@ class JobSchema(BaseModel):
     categories: str = ""
     tech_stacks: str = ""
     seniority: str = ""
+    is_saved: bool = False
     
     model_config = {
         "from_attributes": True,
@@ -142,3 +143,44 @@ class InferredProfileResponse(BaseModel):
     tech_stacks: List[str]
     seniority: Optional[str]
     locations: List[str]
+
+
+class AuthUser(BaseModel):
+    id: int
+    user_id: str
+    email: str
+    username: str
+    created_at: Optional[datetime] = None
+    last_login: Optional[datetime] = None
+
+
+class AuthRegisterRequest(BaseModel):
+    email: str
+    username: str
+    password: str
+
+
+class AuthLoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class AuthTokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: AuthUser
+
+
+class SaveJobRequest(BaseModel):
+    job_id: int
+
+
+class SaveJobResponse(BaseModel):
+    success: bool
+    saved: bool
+    message: str = ""
+
+
+class SavedJobsResponse(BaseModel):
+    job_ids: List[int]
+    count: int

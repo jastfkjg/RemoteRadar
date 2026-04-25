@@ -54,3 +54,75 @@ export interface FilterOptions {
 export interface ApiError {
   detail: string;
 }
+
+export interface User {
+  id: number;
+  user_id: string;
+  email: string;
+  username: string;
+  created_at: string | null;
+  last_login: string | null;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  user: User;
+}
+
+export interface Job {
+  id: number | null;
+  source: string;
+  job_id: string;
+  title: string;
+  company: string;
+  company_url: string;
+  company_logo: string;
+  description: string;
+  location: string;
+  job_type: string;
+  salary: string;
+  tags: string;
+  job_url: string;
+  posted_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  categories: string;
+  tech_stacks: string;
+  seniority: string;
+  is_saved: boolean;
+}
+
+export interface RecommendationItem {
+  job_id: number;
+  job: Job;
+  score: number;
+  reasons: string[];
+}
+
+export interface RecommendationResponse {
+  user_id: string;
+  recommendations: RecommendationItem[];
+  is_hot: boolean;
+}
+
+export interface UserProfile {
+  user_id: string;
+  categories: string[];
+  tech_stacks: string[];
+  seniority: string | null;
+  locations: string[];
+  min_salary: number | null;
+  max_salary: number | null;
+}
+
+export interface SavedJobsResponse {
+  job_ids: number[];
+  count: number;
+}
+
+export interface SaveJobResponse {
+  success: boolean;
+  saved: boolean;
+  message: string;
+}
