@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       spiders:
-        description: '要爬取的网站 (v2ex,wework,remoteok 或 all)'
+        description: '要爬取的网站'
         required: false
         default: 'all'
         type: choice
@@ -15,6 +15,13 @@ on:
           - v2ex
           - wework
           - remoteok
+          - remotive
+          - stackoverflow
+          - wellfound
+          - remoteco
+          - workingnomads
+          - nofluffjobs
+          - eleduck
 
 jobs:
   crawl:

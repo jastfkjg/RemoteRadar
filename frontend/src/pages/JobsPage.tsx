@@ -31,11 +31,9 @@ export const JobsPage: React.FC = () => {
   
   const [searchQuery, setSearchQuery] = useState('');
   const [source, setSource] = useState('');
-  const [jobType, setJobType] = useState('');
   const [daysAgo, setDaysAgo] = useState<number | null>(null);
   const [category, setCategory] = useState('');
   const [techStack, setTechStack] = useState('');
-  const [seniority, setSeniority] = useState('');
 
   const pageSize = 20;
 
@@ -43,11 +41,9 @@ export const JobsPage: React.FC = () => {
     page?: number;
     search?: string;
     source?: string;
-    jobType?: string;
     daysAgo?: number | null;
     category?: string;
     techStack?: string;
-    seniority?: string;
     sinceTime?: string;
     isPollingCheck?: boolean;
   } = {}) => {
@@ -55,11 +51,9 @@ export const JobsPage: React.FC = () => {
       page = 1,
       search = '',
       source: src = '',
-      jobType: jt = '',
       daysAgo: da = null,
       category: cat = '',
       techStack: ts = '',
-      seniority: sn = '',
       sinceTime,
       isPollingCheck = false,
     } = params;
@@ -82,11 +76,9 @@ export const JobsPage: React.FC = () => {
 
       if (search) apiParams.search = search;
       if (src) apiParams.source = src;
-      if (jt) apiParams.job_type = jt;
       if (da) apiParams.days_ago = da;
       if (cat) apiParams.category = cat;
       if (ts) apiParams.tech_stack = ts;
-      if (sn) apiParams.seniority = sn;
       if (sinceTime) apiParams.since_time = sinceTime;
 
       const response: JobListResponse = await jobApi.getJobs(apiParams);
@@ -137,23 +129,19 @@ export const JobsPage: React.FC = () => {
       page: currentPage,
       search: searchQuery,
       source,
-      jobType,
       daysAgo,
       category,
       techStack,
-      seniority,
     });
-  }, [loadJobs, loadStats, currentPage, searchQuery, source, jobType, daysAgo, category, techStack, seniority]);
+  }, [loadJobs, loadStats, currentPage, searchQuery, source, daysAgo, category, techStack]);
 
   const handleRefreshWithNew = useCallback(() => {
     setCurrentPage(1);
     setSearchQuery('');
     setSource('');
-    setJobType('');
     setDaysAgo(null);
     setCategory('');
     setTechStack('');
-    setSeniority('');
     setSearchParams({});
     handleRefresh();
   }, [handleRefresh, setSearchParams]);
@@ -164,14 +152,12 @@ export const JobsPage: React.FC = () => {
       page,
       search: searchQuery,
       source,
-      jobType,
       daysAgo,
       category,
       techStack,
-      seniority,
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [loadJobs, searchQuery, source, jobType, daysAgo, category, techStack, seniority]);
+  }, [loadJobs, searchQuery, source, daysAgo, category, techStack]);
 
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
@@ -180,11 +166,9 @@ export const JobsPage: React.FC = () => {
       page: 1,
       search: query,
       source,
-      jobType,
       daysAgo,
       category,
       techStack,
-      seniority,
     });
     const params = new URLSearchParams(searchParams);
     if (query) {
@@ -193,7 +177,7 @@ export const JobsPage: React.FC = () => {
       params.delete('search');
     }
     setSearchParams(params);
-  }, [loadJobs, source, jobType, daysAgo, category, techStack, seniority, searchParams, setSearchParams]);
+  }, [loadJobs, source, daysAgo, category, techStack, searchParams, setSearchParams]);
 
   const handleSourceChange = useCallback((src: string) => {
     setSource(src);
@@ -202,11 +186,9 @@ export const JobsPage: React.FC = () => {
       page: 1,
       search: searchQuery,
       source: src,
-      jobType,
       daysAgo,
       category,
       techStack,
-      seniority,
     });
     const params = new URLSearchParams(searchParams);
     if (src) {
@@ -215,29 +197,7 @@ export const JobsPage: React.FC = () => {
       params.delete('source');
     }
     setSearchParams(params);
-  }, [loadJobs, searchQuery, jobType, daysAgo, category, techStack, seniority, searchParams, setSearchParams]);
-
-  const handleJobTypeChange = useCallback((type: string) => {
-    setJobType(type);
-    setCurrentPage(1);
-    loadJobs({
-      page: 1,
-      search: searchQuery,
-      source,
-      jobType: type,
-      daysAgo,
-      category,
-      techStack,
-      seniority,
-    });
-    const params = new URLSearchParams(searchParams);
-    if (type) {
-      params.set('type', type);
-    } else {
-      params.delete('type');
-    }
-    setSearchParams(params);
-  }, [loadJobs, searchQuery, source, daysAgo, category, techStack, seniority, searchParams, setSearchParams]);
+  }, [loadJobs, searchQuery, daysAgo, category, techStack, searchParams, setSearchParams]);
 
   const handleDaysAgoChange = useCallback((days: number | null) => {
     setDaysAgo(days);
@@ -246,11 +206,9 @@ export const JobsPage: React.FC = () => {
       page: 1,
       search: searchQuery,
       source,
-      jobType,
       daysAgo: days,
       category,
       techStack,
-      seniority,
     });
     const params = new URLSearchParams(searchParams);
     if (days) {
@@ -259,7 +217,7 @@ export const JobsPage: React.FC = () => {
       params.delete('days');
     }
     setSearchParams(params);
-  }, [loadJobs, searchQuery, source, jobType, category, techStack, seniority, searchParams, setSearchParams]);
+  }, [loadJobs, searchQuery, source, category, techStack, searchParams, setSearchParams]);
 
   const handleCategoryChange = useCallback((cat: string) => {
     setCategory(cat);
@@ -268,11 +226,9 @@ export const JobsPage: React.FC = () => {
       page: 1,
       search: searchQuery,
       source,
-      jobType,
       daysAgo,
       category: cat,
       techStack,
-      seniority,
     });
     const params = new URLSearchParams(searchParams);
     if (cat) {
@@ -281,7 +237,7 @@ export const JobsPage: React.FC = () => {
       params.delete('category');
     }
     setSearchParams(params);
-  }, [loadJobs, searchQuery, source, jobType, daysAgo, techStack, seniority, searchParams, setSearchParams]);
+  }, [loadJobs, searchQuery, source, daysAgo, techStack, searchParams, setSearchParams]);
 
   const handleTechStackChange = useCallback((tech: string) => {
     setTechStack(tech);
@@ -290,11 +246,9 @@ export const JobsPage: React.FC = () => {
       page: 1,
       search: searchQuery,
       source,
-      jobType,
       daysAgo,
       category,
       techStack: tech,
-      seniority,
     });
     const params = new URLSearchParams(searchParams);
     if (tech) {
@@ -303,38 +257,14 @@ export const JobsPage: React.FC = () => {
       params.delete('tech');
     }
     setSearchParams(params);
-  }, [loadJobs, searchQuery, source, jobType, daysAgo, category, seniority, searchParams, setSearchParams]);
-
-  const handleSeniorityChange = useCallback((level: string) => {
-    setSeniority(level);
-    setCurrentPage(1);
-    loadJobs({
-      page: 1,
-      search: searchQuery,
-      source,
-      jobType,
-      daysAgo,
-      category,
-      techStack,
-      seniority: level,
-    });
-    const params = new URLSearchParams(searchParams);
-    if (level) {
-      params.set('seniority', level);
-    } else {
-      params.delete('seniority');
-    }
-    setSearchParams(params);
-  }, [loadJobs, searchQuery, source, jobType, daysAgo, category, techStack, searchParams, setSearchParams]);
+  }, [loadJobs, searchQuery, source, daysAgo, category, searchParams, setSearchParams]);
 
   const handleReset = useCallback(() => {
     setSearchQuery('');
     setSource('');
-    setJobType('');
     setDaysAgo(null);
     setCategory('');
     setTechStack('');
-    setSeniority('');
     setCurrentPage(1);
     setSearchParams({});
     loadJobs({ page: 1 });
@@ -346,37 +276,31 @@ export const JobsPage: React.FC = () => {
     }
   }, [navigate]);
 
-  const hasActiveFilters = !!(source || jobType || daysAgo || searchQuery || category || techStack || seniority);
+  const hasActiveFilters = !!(source || daysAgo || searchQuery || category || techStack);
 
   useEffect(() => {
     const initialPage = parseInt(searchParams.get('page') || '1', 10);
     const initialSearch = searchParams.get('search') || '';
     const initialSource = searchParams.get('source') || '';
-    const initialType = searchParams.get('type') || '';
     const initialDays = searchParams.get('days') ? parseInt(searchParams.get('days')!, 10) : null;
     const initialCategory = searchParams.get('category') || '';
     const initialTech = searchParams.get('tech') || '';
-    const initialSeniority = searchParams.get('seniority') || '';
 
     setCurrentPage(initialPage);
     setSearchQuery(initialSearch);
     setSource(initialSource);
-    setJobType(initialType);
     setDaysAgo(initialDays);
     setCategory(initialCategory);
     setTechStack(initialTech);
-    setSeniority(initialSeniority);
 
     loadStats();
     loadJobs({
       page: initialPage,
       search: initialSearch,
       source: initialSource,
-      jobType: initialType,
       daysAgo: initialDays,
       category: initialCategory,
       techStack: initialTech,
-      seniority: initialSeniority,
     });
   }, []);
 
@@ -416,17 +340,13 @@ export const JobsPage: React.FC = () => {
               <FilterPanel
                 filters={filters}
                 selectedSource={source}
-                selectedJobType={jobType}
                 selectedDaysAgo={daysAgo}
                 selectedCategory={category}
                 selectedTechStack={techStack}
-                selectedSeniority={seniority}
                 onSourceChange={handleSourceChange}
-                onJobTypeChange={handleJobTypeChange}
                 onDaysAgoChange={handleDaysAgoChange}
                 onCategoryChange={handleCategoryChange}
                 onTechStackChange={handleTechStackChange}
-                onSeniorityChange={handleSeniorityChange}
                 onReset={handleReset}
                 isLoading={isLoading}
                 hasActiveFilters={hasActiveFilters}
