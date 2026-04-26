@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import type { UserSkill, UserExperience, UserPreferences } from '../types';
 import {
   User, Briefcase, GraduationCap, Settings, Plus, Edit2, Trash2,
-  Save, X, ChevronDown, Star, Clock, MapPin, DollarSign, Home
+  Save, X, ChevronDown, Star, Clock, MapPin, DollarSign
 } from 'lucide-react';
 
 type TabType = 'skills' | 'experiences' | 'preferences';
@@ -925,56 +925,6 @@ export const ProfilePage: React.FC = () => {
                             <span className="text-sm text-gray-700">仅搜索远程职位</span>
                           </label>
                         </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
-                      <div className="flex items-center space-x-2 mb-4">
-                        <Home className="w-5 h-5 text-purple-500" />
-                        <h3 className="font-medium text-gray-900">期望工作地点</h3>
-                      </div>
-                      <p className="text-sm text-gray-500 mb-4">
-                        输入您偏好的工作地点，用逗号分隔多个地点
-                      </p>
-                      <div className="flex items-center space-x-2 flex-wrap">
-                        {prefForm.preferred_locations.length > 0 && (
-                          prefForm.preferred_locations.map((loc, idx) => (
-                            <span
-                              key={idx}
-                              className="inline-flex items-center space-x-1 px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
-                            >
-                              <span>{loc}</span>
-                              <button
-                                onClick={() => {
-                                  const newLocs = prefForm.preferred_locations.filter((_, i) => i !== idx);
-                                  setPrefForm(prev => ({ ...prev, preferred_locations: newLocs }));
-                                  setPreferencesChanged(true);
-                                }}
-                                className="ml-1 text-gray-400 hover:text-red-500"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            </span>
-                          ))
-                        )}
-                        <input
-                          type="text"
-                          placeholder="输入地点后按回车"
-                          className="flex-1 min-w-[200px] px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              const value = (e.target as HTMLInputElement).value.trim();
-                              if (value && !prefForm.preferred_locations.includes(value)) {
-                                setPrefForm(prev => ({
-                                  ...prev,
-                                  preferred_locations: [...prev.preferred_locations, value]
-                                }));
-                                setPreferencesChanged(true);
-                              }
-                              (e.target as HTMLInputElement).value = '';
-                            }
-                          }}
-                        />
                       </div>
                     </div>
 

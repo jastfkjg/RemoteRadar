@@ -397,13 +397,6 @@ class Recommender:
                         reasons.append(f"匹配期望职位类型: {pref_type}")
                         break
             
-            if prefs.preferred_locations and job.location:
-                for loc in prefs.preferred_locations:
-                    if loc.lower() in job.location.lower():
-                        score += 2
-                        reasons.append(f"匹配期望地点: {loc}")
-                        break
-            
             if prefs.remote_only:
                 if job.location and ('remote' in job.location.lower() or '远程' in job.location):
                     score += 3
@@ -429,13 +422,6 @@ class Recommender:
             if profile.seniority in job_seniorities:
                 score += 2
                 reasons.append(f"匹配职级: {profile.seniority}")
-        
-        if profile.locations and job.location:
-            for loc in profile.locations:
-                if loc.lower() in job.location.lower() or 'remote' in job.location.lower():
-                    score += 1
-                    reasons.append(f"匹配地点: {job.location}")
-                    break
         
         interacted_job_ids = {a.job_id for a in user_actions}
         for action in user_actions:

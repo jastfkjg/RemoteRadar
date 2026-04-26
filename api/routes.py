@@ -8,7 +8,11 @@ from api.schemas import (
     UserProfileSchema, UserProfileUpdate, UserActionSchema,
     RecommendationResponse, InferredProfileResponse,
     AuthUser, AuthRegisterRequest, AuthLoginRequest, AuthTokenResponse,
-    SaveJobRequest, SaveJobResponse, SavedJobsResponse
+    SaveJobRequest, SaveJobResponse, SavedJobsResponse,
+    UserSkill, UserSkillCreate, UserSkillUpdate,
+    UserExperience, UserExperienceCreate, UserExperienceUpdate,
+    UserPreferences, UserPreferencesUpdate,
+    ProfileCompleteResponse
 )
 from api.database_service import db_service
 from api.auth import get_api_key, get_api_key_optional, get_current_user, get_current_user_required

@@ -31,6 +31,9 @@ from src.spiders import (
     NoFluffJobsSpider,
     HimalayasSpider,
     JustRemoteSpider,
+    ArbeitnowSpider,
+    JobicySpider,
+    EmplloSpider,
 )
 from src.models import JobListing
 from src.api_client import RemoteAPIClient, job_listing_to_api_dict
@@ -40,11 +43,11 @@ class RemoteRadar:
     AVAILABLE_SPIDERS = [
         'v2ex', 'wework', 'remoteok', 'remotive', 'stackoverflow',
         'wellfound', 'remoteco', 'workingnomads', 'nofluffjobs',
-        'himalayas', 'justremote', 'eleduck', 'all'
+        'himalayas', 'justremote', 'eleduck', 'arbeitnow', 'jobicy', 'empllo', 'all'
     ]
     
     DEFAULT_SPIDERS = [
-        'remoteok', 'remotive', 'wework', 'workingnomads', 'himalayas'
+        'himalayas', 'remoteok', 'remotive', 'arbeitnow', 'jobicy'
     ]
     
     def __init__(self, db_path: str = "jobs.db", mode: str = "local", api_url: str = None, api_key: str = None):
@@ -229,6 +232,38 @@ class RemoteRadar:
             )
             spider.close()
         
+        elif spider_name == 'arbeitnow':
+            spider = ArbeitnowSpider(delay=options.get('delay', 0.5))
+            jobs = spider.crawl(
+                max_pages=options.get('max_pages', 5),
+                max_jobs=options.get('max_jobs', 200),
+                existing_ids=existing_ids,
+                stop_after_duplicates=stop_after
+            )
+            spider.close()
+        
+        elif spider_name == 'jobicy':
+            spider = JobicySpider(delay=options.get('delay', 1.0))
+            categories = options.get('categories')
+            jobs = spider.crawl(
+                categories=categories if categories and categories != ['all'] else None,
+                max_jobs=options.get('max_jobs', 200),
+                existing_ids=existing_ids,
+                stop_after_duplicates=stop_after
+            )
+            spider.close()
+        
+        elif spider_name == 'empllo':
+            spider = EmplloSpider(delay=options.get('delay', 1.0))
+            jobs = spider.crawl(
+                remote_only=options.get('remote_only', True),
+                categories=options.get('categories'),
+                max_jobs=options.get('max_jobs', 200),
+                existing_ids=existing_ids,
+                stop_after_duplicates=stop_after
+            )
+            spider.close()
+        
         return jobs
     
     def save_jobs_local(self, jobs: List[JobListing], source: str) -> tuple:
@@ -381,10 +416,14 @@ def main():
   python main.py --list
 
 支持的网站:
-  v2ex          - V2EX 社区远程工作节点
-  wework        - Wework Remotely
+  himalayas     - Himalayas (免费公开API，10万+远程职位)
   remoteok      - RemoteOK
   remotive      - Remotive (公开API)
+  arbeitnow     - ArbeitNow (免费公开API，聚合多源)
+  jobicy        - Jobicy (免费API，含薪资信息)
+  empllo        - Empllo (RSS feed，远程职位)
+  v2ex          - V2EX 社区远程工作节点
+  wework        - Wework Remotely
   stackoverflow - Stack Overflow Jobs (RSS)
   wellfound     - Wellfound (原 AngelList)
   remoteco      - Remote.co
@@ -418,7 +457,8 @@ def main():
         nargs='+',
         default=['all'],
         choices=['v2ex', 'wework', 'remoteok', 'remotive', 'stackoverflow',
-                 'wellfound', 'remoteco', 'workingnomads', 'nofluffjobs', 'eleduck', 'all'],
+                 'wellfound', 'remoteco', 'workingnomads', 'nofluffjobs', 
+                 'eleduck', 'arbeitnow', 'jobicy', 'empllo', 'all'],
         help='指定要爬取的网站 (默认: all - 除 eleduck 外)'
     )
     
@@ -504,7 +544,8 @@ def main():
         '--source',
         default=None,
         choices=['v2ex', 'wework', 'remoteok', 'remotive', 'stackoverflow',
-                 'wellfound', 'remoteco', 'workingnomads', 'nofluffjobs', 'eleduck', 'all'],
+                 'wellfound', 'remoteco', 'workingnomads', 'nofluffjobs', 
+                 'eleduck', 'arbeitnow', 'jobicy', 'empllo', 'all'],
         help='列表显示时过滤来源'
     )
     
