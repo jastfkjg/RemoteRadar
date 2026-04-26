@@ -5,6 +5,7 @@ import { JobDetailPage } from './pages/JobDetailPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { RecommendationsPage } from './pages/RecommendationsPage';
+import { SavedJobsPage } from './pages/SavedJobsPage';
 import { AuthProvider } from './contexts/AuthContext';
 
 const router = createBrowserRouter([
@@ -31,6 +32,10 @@ const router = createBrowserRouter([
   {
     path: '/recommendations',
     element: <RecommendationsPage />,
+  },
+  {
+    path: '/saved',
+    element: <SavedJobsPage />,
   },
 ]);
 

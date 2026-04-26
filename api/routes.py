@@ -366,6 +366,14 @@ async def save_job(
     current_user: dict = Depends(get_current_user_required)
 ):
     result = await db_service.save_job(current_user['user_id'], request.job_id)
+    
+    if result['success'] and result.get('saved', False):
+        recommender.record_user_action(
+            user_id=current_user['user_id'],
+            job_id=request.job_id,
+            action_type='save'
+        )
+    
     return SaveJobResponse(
         success=result['success'],
         saved=result.get('saved', False),

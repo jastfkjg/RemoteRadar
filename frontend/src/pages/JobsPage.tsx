@@ -176,6 +176,12 @@ export const JobsPage: React.FC = () => {
             : item
         )
       );
+
+      if (isAuthenticated && activeTab === 'recommendations') {
+        setTimeout(() => {
+          loadRecommendations();
+        }, 500);
+      }
     } catch (err) {
       console.error('保存职位失败:', err);
     } finally {
