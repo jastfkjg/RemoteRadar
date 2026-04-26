@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <!-- 背景圆 -->
+  <circle cx="50" cy="50" r="48" fill="#1e3a5f" stroke="#2d5a87" stroke-width="2"/>
+  
+  <!-- 雷达同心圆 -->
+  <circle cx="50" cy="50" r="35" fill="none" stroke="#3a7ca5" stroke-width="1.5" opacity="0.7"/>
+  <circle cx="50" cy="50" r="25" fill="none" stroke="#4a9cc9" stroke-width="1.5" opacity="0.7"/>
+  <circle cx="50" cy="50" r="15" fill="none" stroke="#5abce9" stroke-width="1.5" opacity="0.7"/>
+  
+  <!-- 雷达扫描线 -->
+  <line x1="50" y1="50" x2="50" y2="12" stroke="#6ac8ff" stroke-width="2" opacity="0.8"/>
+  <line x1="50" y1="50" x2="88" y2="50" stroke="#6ac8ff" stroke-width="2" opacity="0.6"/>
+  <line x1="50" y1="50" x2="50" y2="88" stroke="#6ac8ff" stroke-width="2" opacity="0.4"/>
+  <line x1="50" y1="50" x2="12" y2="50" stroke="#6ac8ff" stroke-width="2" opacity="0.3"/>
+  
+  <!-- 目标点（工作机会） -->
+  <circle cx="70" cy="30" r="3" fill="#ff6b6b">
+    <animate attributeName="r" values="3;5;3" dur="2s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="30" cy="60" r="3" fill="#4ecdc4">
+    <animate attributeName="r" values="3;5;3" dur="2.5s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="1;0.5;1" dur="2.5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="60" cy="70" r="3" fill="#ffe66d">
+    <animate attributeName="r" values="3;5;3" dur="3s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="1;0.5;1" dur="3s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- 中心点 -->
+  <circle cx="50" cy="50" r="4" fill="#ffffff"/>
+</svg>
