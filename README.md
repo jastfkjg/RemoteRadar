@@ -1,93 +1,161 @@
-# RemoteRadar - 智能远程工作职位聚合平台
+<div align="center">
+  <img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=modern%20radar%20icon%20with%20blue%20and%20green%20colors%2C%20symbolizing%20remote%20work%20job%20search%20platform%2C%20minimalist%20design&image_size=square_hd" alt="RemoteRadar Logo" width="120" height="120">
+  <h1>RemoteRadar</h1>
+  <p>智能远程工作职位聚合平台</p>
+  
+  <p>
+    <img src="https://img.shields.io/github/stars/your-username/RemoteRadar?style=social" alt="GitHub Stars">
+    <img src="https://img.shields.io/github/forks/your-username/RemoteRadar?style=social" alt="GitHub Forks">
+    <img src="https://img.shields.io/github/last-commit/your-username/RemoteRadar" alt="Last Commit">
+    <img src="https://img.shields.io/github/license/your-username/RemoteRadar" alt="License">
+  </p>
+  
+  <p>
+    <a href="#-功能特性">功能特性</a> •
+    <a href="#-快速开始">快速开始</a> •
+    <a href="#-安装指南">安装指南</a> •
+    <a href="#-使用方法">使用方法</a> •
+    <a href="#-贡献指南">贡献指南</a>
+  </p>
+</div>
 
-一个完整的远程工作职位抓取和展示平台，包含爬虫、RESTful API、智能推荐系统、个人中心和现代化Web界面。
+---
 
-## 功能特性
+## 🚀 项目简介
 
-### 🕷️ 爬虫功能
+**RemoteRadar** 是一个功能强大的远程工作职位聚合平台，它像雷达一样扫描全球知名远程招聘平台，为你发现理想的远程工作机会。
 
-- **多网站支持**：爬取 15+ 知名远程招聘平台
-- **丰富数据**：抓取公司信息、职位名称、职位描述、发布时间、薪资范围、公司Logo、地点限制、时区限制等
-- **智能去重**：支持根据来源和职位ID自动去重更新
-- **增量爬取**：遇到连续已存在职位自动停止
-- **GitHub Actions**：内置定时任务，每12小时自动运行一次
+### 🌟 核心优势
 
-### 🤖 智能推荐系统
+- **🔍 多源聚合**：整合 15+ 全球知名远程招聘平台
+- **🤖 智能推荐**：基于内容过滤的个性化职位推荐系统
+- **👤 个人中心**：技能管理、工作经验记录、职位偏好设置
+- **🔐 安全认证**：JWT 认证机制，保护你的数据安全
+- **📱 响应式设计**：完美适配桌面和移动设备
+- **⏰ 自动更新**：GitHub Actions 定时任务，每 12 小时自动爬取数据
 
-- **内容过滤推荐**：基于职位内容和用户画像进行相似度计算
+---
+
+## ✨ 功能特性
+
+### 🕷️ 智能爬虫系统
+
+- **多平台支持**：爬取 15+ 知名远程招聘平台，包括 Himalayas、RemoteOK、WeWork Remotely 等
+- **丰富数据**：抓取职位名称、公司信息、薪资范围、地点限制、时区要求等完整信息
+- **智能去重**：自动识别重复职位，确保数据准确性
+- **增量爬取**：遇到已存在职位自动停止，提高效率
+- **稳定可靠**：优先使用官方 API，减少因网站改版导致的爬虫失效
+
+### 🤖 个性化推荐系统
+
 - **多维度用户画像**：
-  - 技能兴趣：从用户行为推断（浏览=1, 点击=2, 收藏=5, 申请=10）
-  - 行业偏好：从收藏的职位推断
-  - 地点偏好：从收藏的职位推断
-  - 薪资范围：从收藏的职位推断
-  - 职级推断：从职位标题和标签推断
-- **用户显式数据**：支持用户在个人中心设置的技能、工作经验、工作倾向
-- **热门推荐回退**：当用户行为不足时推荐热门职位
-- **权重优化**：用户主动设置的数据 > 用户技能/经验 > 用户行为推断
+  - 技能兴趣分析（从用户行为推断权重）
+  - 行业偏好识别（从收藏职位推断）
+  - 地点偏好收集（从收藏职位推断）
+  - 薪资范围预测（从收藏职位推断）
+  - 职级智能推断（从职位标题和标签推断）
+
+- **智能推荐算法**：
+  - 内容过滤推荐（Content-based Filtering）
+  - TF-IDF + 余弦相似度计算
+  - 热门职位回退机制（用户行为不足时）
+  - 权重优化：用户主动设置 > 用户技能/经验 > 用户行为推断
 
 ### 👤 个人中心系统
 
 - **技能管理**：
   - 添加、编辑、删除个人专业技能
-  - 支持技能名称、熟练程度（初级/中级/高级/专家）、获取时间
-  - 星级熟练度显示
+  - 支持熟练度选择（初级/中级/高级/专家）
+  - 星级熟练度可视化展示
+
 - **工作经验**：
-  - 支持录入工作经历
-  - 公司名称、职位、工作时间、主要职责与成就
+  - 完整的工作经历记录
+  - 公司名称、职位、时间范围
+  - 工作描述和主要成就
   - 支持"目前在职"标记
-- **工作倾向设置**：
+
+- **职位偏好**：
   - 期望行业（多选）
-  - 职位类型
-  - 薪资范围
-  - 工作模式（全职/兼职/远程）
+  - 职位类型选择
+  - 薪资范围设置
+  - 工作模式偏好（全职/兼职/远程）
   - 仅远程职位选项
 
-### 🔐 用户认证系统
+### 🔐 用户认证与收藏
 
-- **JWT Bearer Token** 认证机制
-- **用户注册**：用户名、邮箱、密码
-- **用户登录**：邮箱/密码认证，返回 Token
-- **Token 持久化**：localStorage 存储
-- **API 拦截器**：自动添加认证头
+- **JWT 认证**：安全的 Bearer Token 认证机制
+- **用户注册/登录**：完整的用户身份验证系统
+- **职位收藏**：收藏感兴趣的职位，随时查看
+- **行为记录**：自动记录用户浏览、点击、收藏等行为，用于个性化推荐
 
-### ❤️ 收藏功能
-
-- **收藏职位**：点击收藏按钮保存感兴趣的职位
-- **取消收藏**：随时取消收藏
-- **收藏页面**：专门的"我的收藏"页面管理收藏
-- **影响推荐**：收藏行为权重是浏览的 5 倍
-
-### 🖥️ Web应用功能
+### 🖥️ 现代化 Web 界面
 
 - **双标签页首页**：
-  - "全部职位"：所有爬取的职位
+  - "全部职位"：浏览所有爬取的职位
   - "为我推荐"：基于用户画像的个性化推荐
-- **职位展示**：美观的职位卡片展示，包含完整的职位信息
-- **筛选功能**：支持按来源、职位类型、发布时间筛选
-- **搜索功能**：支持关键词搜索职位名、公司名、描述
-- **分页浏览**：支持多页浏览职位列表
-- **实时同步**：前端轮询检查新数据，有更新时自动通知
-- **职位详情页**：查看完整的职位描述和公司信息
-- **响应式设计**：适配桌面和移动设备
 
-### 🏗️ 技术架构
+- **强大筛选功能**：
+  - 按来源筛选（Himalayas、RemoteOK 等）
+  - 按时间筛选（今天、本周、本月）
+  - 按职位类型筛选
+  - 关键词搜索（职位名、公司名、描述）
 
-- **后端**：FastAPI + SQLite + aiosqlite + Pydantic
-- **前端**：React 18 + TypeScript + React Router + React Context + Axios + Tailwind CSS + Lucide React
-- **推荐算法**：内容过滤推荐（Content-based Filtering）、TF-IDF + 余弦相似度
-- **认证**：JWT (python-jose) + bcrypt
-- **构建工具**：Vite
+- **职位详情页**：
+  - 完整的职位信息展示
+  - 公司信息和 Logo
+  - 薪资范围和地点限制
+  - 访问公司网站和原职位链接
+  - 收藏功能（登录后）
+
+- **响应式设计**：
+  - 桌面端：完整功能展示
+  - 移动端：优化的触摸体验
 
 ---
 
-## 支持的网站
+## 🛠️ 技术架构
+
+### 后端技术栈
+
+| 技术 | 版本 | 用途 |
+|------|------|------|
+| FastAPI | 0.100+ | Web 框架 |
+| SQLite | 3.x | 数据库 |
+| aiosqlite | 0.19+ | 异步数据库驱动 |
+| Pydantic | 2.x | 数据验证 |
+| JWT (python-jose) | 3.x | 身份认证 |
+| bcrypt | 4.x | 密码加密 |
+
+### 前端技术栈
+
+| 技术 | 版本 | 用途 |
+|------|------|------|
+| React | 18.2+ | UI 框架 |
+| TypeScript | 5.2+ | 类型安全 |
+| React Router | 6.x | 路由管理 |
+| React Context | 18.x | 状态管理 |
+| Axios | 1.6+ | HTTP 客户端 |
+| Tailwind CSS | 3.4+ | 样式框架 |
+| Lucide React | 0.303+ | 图标库 |
+| Vite | 5.0+ | 构建工具 |
+
+### 推荐算法
+
+- **算法类型**：内容过滤推荐（Content-based Filtering）
+- **特征提取**：TF-IDF 向量化
+- **相似度计算**：余弦相似度
+- **数据融合**：多源权重优化
+
+---
+
+## 📊 支持的平台
 
 按数据量排序（⭐ 推荐优先使用）：
 
 | 爬虫名称 | 数据源 | 预计数据量 | 特点 |
 |---------|--------|-----------|------|
 | **Himalayas** ⭐ | 官方 JSON API | **100,000+** | 免费公开API，薪资范围、职级、地点/时区限制 |
-| **Arbeitnow** ⭐ | 官方 JSON API | ~200+ | 免费公开API，聚合多源ATS系统（Greenhouse、SmartRecruiters等） |
+| **Arbeitnow** ⭐ | 官方 JSON API | ~200+ | 免费公开API，聚合多源ATS系统 |
 | **RemoteOK** ⭐ | 官方 JSON API | ~116 | 成熟稳定，官方API支持 |
 | **Jobicy** ⭐ | 官方 JSON API | ~100 | 免费API，含详细薪资范围信息 |
 | **Empllo** | RSS Feed | ~100 | 远程职位RSS feed |
@@ -102,77 +170,69 @@
 | **JustRemote** | HTML解析 | - | 远程工作平台 |
 | **Eleduck (电鸭)** | HTML解析 | - | 中文远程社区，有反爬机制 |
 
-### 数据来源统计（根据最新测试）
-
-```
-数据源统计:
-├── himalayas: 102,030+ 职位 (主要数据源)
-├── arbeitnow: ~100 职位/页，支持分页
-├── remoteok: ~116 职位
-├── jobicy: ~100 职位
-├── empllo: ~100 职位
-└── remotive: ~20 职位
-```
-
 ---
 
-## 安装
+## 🚀 快速开始
 
 ### 环境要求
 
-- Python 3.8+
-- Node.js 18+
-- npm 或 yarn
+- **Python**：3.8+
+- **Node.js**：18+
+- **npm** 或 **yarn**
 
 ### 安装步骤
 
-1. 克隆仓库
-```bash
-git clone <your-repo-url>
-cd RemoteRadar
-```
+1. **克隆仓库**
+   ```bash
+   git clone https://github.com/your-username/RemoteRadar.git
+   cd RemoteRadar
+   ```
 
-2. 安装 Python 依赖
-```bash
-python -m venv venv
-source venv/bin/activate  # macOS/Linux
-# 或
-venv\Scripts\activate  # Windows
+2. **设置 Python 虚拟环境并安装依赖**
+   ```bash
+   # 创建虚拟环境
+   python -m venv venv
+   
+   # 激活虚拟环境
+   # macOS/Linux
+   source venv/bin/activate
+   # Windows
+   # venv\Scripts\activate
+   
+   # 安装依赖
+   pip install -r requirements.txt
+   ```
 
-pip install -r requirements.txt
-```
+3. **安装前端依赖**
+   ```bash
+   cd frontend
+   npm install
+   cd ..
+   ```
 
-3. 安装前端依赖
-```bash
-cd frontend
-npm install
-cd ..
-```
+### 运行项目
 
----
-
-## 快速开始
-
-### 方式一：开发模式（推荐）
+#### 方式一：开发模式（推荐）
 
 需要分别启动后端和前端两个终端。
 
-**终端1 - 启动后端：**
+**终端 1 - 启动后端：**
 ```bash
 source venv/bin/activate
 uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-**终端2 - 启动前端：**
+**终端 2 - 启动前端：**
 ```bash
-cd frontend && npm run dev
+cd frontend
+npm run dev
 ```
 
 然后访问：
 - 前端页面：http://localhost:3001
-- API文档：http://localhost:8000/docs
+- API 文档：http://localhost:8000/docs
 
-### 方式二：生产模式（构建前端）
+#### 方式二：生产模式（构建前端）
 
 先构建前端，然后通过 FastAPI 服务静态文件。
 
@@ -186,7 +246,7 @@ uvicorn api.main:app --host 0.0.0.0 --port 8000
 
 然后访问：http://localhost:8000
 
-### 方式三：先爬取数据
+#### 方式三：先爬取数据
 
 如果数据库是空的，可以先运行爬虫：
 
@@ -203,7 +263,7 @@ python main.py --spiders himalayas
 
 ---
 
-## 使用方法
+## 📖 使用方法
 
 ### 爬虫命令行
 
@@ -235,7 +295,7 @@ python main.py --spiders all --stop-after 10
 python main.py --spiders all --max-pages 10 --max-jobs 500
 ```
 
-### Web界面功能
+### Web 界面功能
 
 #### 首页（双标签页）
 
@@ -246,7 +306,7 @@ python main.py --spiders all --max-pages 10 --max-jobs 500
   - 时间筛选：今天、本周、本月、全部
   - 职位类型筛选
 - 搜索框：支持关键词搜索
-- 职位卡片：展示公司Logo、职位名、公司名、地点、薪资、标签
+- 职位卡片：展示公司 Logo、职位名、公司名、地点、薪资、标签
 - 分页：支持页码导航
 
 **为我推荐标签页**：
@@ -257,7 +317,7 @@ python main.py --spiders all --max-pages 10 --max-jobs 500
 #### 职位详情页
 
 - 完整的职位信息展示
-- 公司信息和Logo
+- 公司信息和 Logo
 - 薪资范围（如果有）
 - 地点/时区限制
 - 访问公司网站按钮
@@ -299,23 +359,24 @@ python main.py --spiders all --max-pages 10 --max-jobs 500
 
 ---
 
-## 推荐算法
+## 📊 推荐算法详解
 
-### 用户画像 UserProfile
+### 用户画像 (UserProfile)
 
 ```python
 @dataclass
 class UserProfile:
-    skill_interests: Dict[str, float]  # 技能兴趣权重
-    category_preferences: Dict[str, float]  # 类别偏好
-    location_preferences: List[str]  # 地点偏好
-    salary_preferences: Dict[str, float]  # 薪资偏好
-    seniority: Optional[str]  # 职级 (Entry/Mid/Senior/Manager/Executive)
+    # 从用户行为推断的画像
+    skill_interests: Dict[str, float]      # 技能兴趣权重
+    category_preferences: Dict[str, float] # 类别偏好
+    location_preferences: List[str]         # 地点偏好
+    salary_preferences: Dict[str, float]    # 薪资偏好
+    seniority: Optional[str]                 # 职级
     
-    # 新增：用户显式设置的数据
-    skills: List[Dict]  # 用户在个人中心设置的技能
-    experiences: List[Dict]  # 用户工作经验
-    preferences: Optional[Dict]  # 用户工作倾向设置
+    # 用户主动设置的数据
+    skills: List[Dict]          # 用户在个人中心设置的技能
+    experiences: List[Dict]     # 用户工作经验
+    preferences: Optional[Dict] # 用户工作倾向设置
 ```
 
 ### 推荐流程
@@ -364,7 +425,7 @@ class UserProfile:
 
 ---
 
-## API 接口
+## 🔌 API 接口
 
 ### 职位相关
 
@@ -428,17 +489,17 @@ class UserProfile:
 | GET | `/api/profile/preferences` | 获取工作倾向设置 |
 | PUT | `/api/profile/preferences` | 更新工作倾向设置 |
 
-### 文档
+### API 文档
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/docs` | Swagger API文档 |
-| GET | `/redoc` | ReDoc API文档 |
+| GET | `/docs` | Swagger API 文档 |
+| GET | `/redoc` | ReDoc API 文档 |
 | GET | `/openapi.json` | OpenAPI 3.1 规范 |
 
 ---
 
-## 项目结构
+## 📁 项目结构
 
 ```
 RemoteRadar/
@@ -448,32 +509,34 @@ RemoteRadar/
 ├── api/
 │   ├── __init__.py
 │   ├── main.py                    # FastAPI 主应用
-│   ├── routes.py                  # API 路由（职位/推荐/认证/收藏/个人中心）
+│   ├── routes.py                  # API 路由
 │   ├── schemas.py                 # Pydantic 数据模型
 │   ├── database_service.py        # 异步数据库服务
 │   ├── auth.py                    # JWT 认证相关
-│   └── recommender.py             # 推荐算法（内容过滤、用户画像）
+│   └── recommender.py             # 推荐算法
 ├── frontend/
+│   ├── public/
+│   │   └── favicon.svg            # 网站图标
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── Header.tsx         # 头部导航（含用户菜单）
-│   │   │   ├── JobCard.tsx        # 职位卡片（含收藏按钮）
+│   │   │   ├── Header.tsx         # 头部导航
+│   │   │   ├── JobCard.tsx        # 职位卡片
 │   │   │   ├── Pagination.tsx     # 分页组件
 │   │   │   ├── FilterPanel.tsx    # 筛选面板
-│   │   │   └── common.tsx         # 通用组件（加载、空状态等）
+│   │   │   └── common.tsx         # 通用组件
 │   │   ├── pages/
-│   │   │   ├── JobsPage.tsx       # 职位列表页（双标签页：全部/推荐）
+│   │   │   ├── JobsPage.tsx       # 职位列表页
 │   │   │   ├── JobDetailPage.tsx  # 职位详情页
-│   │   │   ├── SavedJobsPage.tsx  # 我的收藏页面
-│   │   │   ├── ProfilePage.tsx    # 个人中心页面（技能/经验/倾向）
-│   │   │   ├── LoginPage.tsx      # 登录页面
-│   │   │   └── RegisterPage.tsx   # 注册页面
+│   │   │   ├── SavedJobsPage.tsx  # 我的收藏
+│   │   │   ├── ProfilePage.tsx    # 个人中心
+│   │   │   ├── LoginPage.tsx      # 登录页
+│   │   │   └── RegisterPage.tsx   # 注册页
 │   │   ├── services/
 │   │   │   └── api.ts             # API 服务封装
-│   │   ├── context/
+│   │   ├── contexts/
 │   │   │   └── AuthContext.tsx    # 认证 Context
 │   │   ├── types/
-│   │   │   └── index.ts           # TypeScript 类型定义
+│   │   │   └── index.ts           # TypeScript 类型
 │   │   ├── router.tsx             # 路由配置
 │   │   ├── App.tsx
 │   │   ├── main.tsx
@@ -487,7 +550,7 @@ RemoteRadar/
 │   ├── start-backend.sh           # 启动后端
 │   ├── start-frontend.sh          # 启动前端
 │   ├── build-frontend.sh          # 构建前端
-│   └── crawl.sh                    # 运行爬虫
+│   └── crawl.sh                   # 运行爬虫
 ├── src/
 │   ├── __init__.py
 │   ├── models/
@@ -495,27 +558,18 @@ RemoteRadar/
 │   │   └── job_listing.py         # 数据模型
 │   ├── database/
 │   │   ├── __init__.py
-│   │   └── database.py            # SQLite 数据库操作（同步）
+│   │   └── database.py            # SQLite 数据库操作
 │   └── spiders/
 │       ├── __init__.py
-│       ├── himalayas_spider.py    # Himalayas 爬虫（JSON API，10万+）
-│       ├── arbeitnow_spider.py    # Arbeitnow 爬虫（JSON API）
-│       ├── jobicy_spider.py       # Jobicy 爬虫（JSON API）
-│       ├── empllo_spider.py       # Empllo 爬虫（RSS Feed）
+│       ├── himalayas_spider.py    # Himalayas 爬虫
+│       ├── arbeitnow_spider.py    # Arbeitnow 爬虫
+│       ├── jobicy_spider.py       # Jobicy 爬虫
 │       ├── remoteok_spider.py     # RemoteOK 爬虫
 │       ├── remotive_spider.py     # Remotive 爬虫
-│       ├── wework_spider.py       # Wework Remotely 爬虫
 │       ├── v2ex_spider.py         # V2EX 爬虫
-│       ├── stackoverflow_spider.py# Stack Overflow 爬虫
-│       ├── wellfound_spider.py    # Wellfound 爬虫
-│       ├── remoteco_spider.py     # Remote.co 爬虫
-│       ├── workingnomads_spider.py# Working Nomads 爬虫
-│       ├── nofluffjobs_spider.py  # NoFluffJobs 爬虫
-│       ├── justremote_spider.py   # JustRemote 爬虫
-│       └── eluduck_spider.py      # 电鸭社区爬虫
+│       ├── wework_spider.py       # Wework Remotely 爬虫
+│       └── ...                    # 其他爬虫
 ├── exports/                        # JSON 导出目录
-│   ├── stats.json                  # 统计信息
-│   └── ...                         # 各源导出数据
 ├── jobs.db                         # SQLite 数据库
 ├── main.py                         # 爬虫主程序
 ├── requirements.txt                # Python 依赖
@@ -525,7 +579,7 @@ RemoteRadar/
 
 ---
 
-## 数据库模型
+## 🗄️ 数据库模型
 
 ### 核心表
 
@@ -543,77 +597,34 @@ RemoteRadar/
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| id | int | 数据库自增ID |
+| id | int | 数据库自增 ID |
 | source | str | 来源 |
 | job_id | str | 职位唯一标识 |
 | title | str | 职位名称 |
 | company | str | 公司名称 |
 | company_url | str | 公司网站 |
-| company_logo | str | 公司Logo URL |
+| company_logo | str | 公司 Logo URL |
 | description | str | 职位描述 |
 | location | str | 工作地点 |
 | job_type | str | 职位类型/分类 |
 | salary | str | 薪资范围 |
-| tags | str | 标签 (逗号分隔) |
-| job_url | str | 职位详情URL |
+| tags | str | 标签（逗号分隔） |
+| job_url | str | 职位详情 URL |
 | posted_at | datetime | 发布时间 |
 | created_at | datetime | 记录创建时间 |
 | updated_at | datetime | 记录更新时间 |
 
-### 用户相关表
-
-**user_skills (技能管理)**:
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | int | 主键 |
-| user_id | int | 用户ID |
-| skill_name | str | 技能名称 |
-| proficiency | str | 熟练程度 (beginner/intermediate/advanced/expert) |
-| acquired_date | date | 开始学习日期 |
-| created_at | datetime | 创建时间 |
-| updated_at | datetime | 更新时间 |
-
-**user_experiences (工作经验)**:
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | int | 主键 |
-| user_id | int | 用户ID |
-| company | str | 公司名称 |
-| position | str | 职位 |
-| start_date | date | 开始时间 |
-| end_date | date | 结束时间 |
-| current | bool | 是否在职 |
-| description | text | 工作描述 |
-| achievements | text | 主要成就 |
-| created_at | datetime | 创建时间 |
-| updated_at | datetime | 更新时间 |
-
-**user_preferences (工作倾向)**:
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | int | 主键 |
-| user_id | int | 用户ID |
-| preferred_industries | str | 期望行业 (逗号分隔) |
-| preferred_job_types | str | 期望职位类型 |
-| preferred_locations | str | 期望地点 (逗号分隔) |
-| min_salary | int | 最低薪资 |
-| max_salary | int | 最高薪资 |
-| work_mode | str | 工作模式 |
-| remote_only | bool | 仅远程职位 |
-| created_at | datetime | 创建时间 |
-| updated_at | datetime | 更新时间 |
-
 ---
 
-## GitHub Actions 配置
+## ⏰ GitHub Actions 配置
 
-项目已配置好自动定时爬取任务，每12小时运行一次。
+项目已配置好自动定时爬取任务，每 12 小时运行一次。
 
 ### 工作流说明
 
 1. **定时触发**：`cron: '0 */12 * * *'` - 每天 00:00 和 12:00 UTC 时间运行
 2. **手动触发**：可在 GitHub Actions 页面手动运行，支持选择爬取目标
-3. **数据持久化**：每次运行后自动提交 `jobs.db` 和 `exports/` 目录到仓库
+3. **数据持久化**：每次运行后自动提交数据到仓库
 
 ### 启用步骤
 
@@ -624,9 +635,56 @@ RemoteRadar/
 
 ---
 
-## 开发指南
+## 🤝 贡献指南
 
-### 添加新的爬虫源
+我们欢迎所有形式的贡献！无论你是想修复 bug、添加新功能、改进文档，还是提出建议，都非常感谢你的参与。
+
+### 如何贡献
+
+1. **Fork 仓库**：点击页面右上角的 Fork 按钮
+2. **克隆你的 Fork**：
+   ```bash
+   git clone https://github.com/your-username/RemoteRadar.git
+   cd RemoteRadar
+   ```
+3. **创建分支**：
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+4. **做出修改**：
+   - 确保代码风格一致
+   - 添加必要的注释
+   - 测试你的修改
+5. **提交更改**：
+   ```bash
+   git add .
+   git commit -m "feat: 描述你的修改"
+   ```
+6. **推送到你的 Fork**：
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+7. **创建 Pull Request**：
+   - 前往原仓库
+   - 点击 "Pull requests" 标签
+   - 点击 "New pull request" 按钮
+   - 选择你的分支和修改
+   - 填写 PR 描述，详细说明你的修改
+
+### 贡献规范
+
+- **代码风格**：遵循现有代码风格
+- **提交信息**：使用语义化提交信息
+  - `feat:` 新功能
+  - `fix:` 修复 bug
+  - `docs:` 文档更新
+  - `refactor:` 代码重构
+  - `test:` 测试相关
+  - `chore:` 构建/工具相关
+
+### 开发指南
+
+#### 添加新的爬虫源
 
 1. 在 `src/spiders/` 目录下创建新的 Spider 类（参考现有爬虫）
 2. 在 `src/spiders/__init__.py` 中导出
@@ -638,15 +696,15 @@ RemoteRadar/
    - 更新命令行选项的 `choices`
    - 更新帮助文档
 
-### 自定义前端样式
+#### 自定义前端样式
 
-项目使用 Tailwind CSS 4，配置文件在 `frontend/tailwind.config.js`。
+项目使用 Tailwind CSS 3，配置文件在 `frontend/tailwind.config.js`。
 
-### API 扩展
+#### API 扩展
 
 在 `api/routes.py` 中添加新的端点，在 `api/schemas.py` 中定义数据模型。
 
-### 推荐算法扩展
+#### 推荐算法扩展
 
 在 `api/recommender.py` 中：
 - `UserProfile`：用户画像数据类
@@ -657,10 +715,10 @@ RemoteRadar/
 
 ---
 
-## 常见问题
+## 📝 常见问题
 
 ### Q: 前端无法连接后端？
-A: 确保后端已启动在 8000 端口，前端 vite.config.ts 已配置代理。开发模式下前端会自动代理 `/api` 请求到后端。
+A: 确保后端已启动在 8000 端口，前端 `vite.config.ts` 已配置代理。开发模式下前端会自动代理 `/api` 请求到后端。
 
 ### Q: 数据库为空？
 A: 先运行爬虫 `python main.py --spiders all` 或等待 GitHub Actions 定时任务执行。主要数据源是 Himalayas（10万+ 职位）。
@@ -682,13 +740,13 @@ A: 修改以下位置：
 4. `frontend/src/pages/JobsPage.tsx` - 处理新参数
 
 ### Q: 爬虫被限制？
-A: 确保设置合理的请求间隔（`--delay` 参数），遵守各网站的 robots.txt 和使用条款。主要数据源（Himalayas、Arbeitnow 等）使用官方 API，不会被限制。
+A: 确保设置合理的请求间隔（`--delay` 参数），遵守各网站的 `robots.txt` 和使用条款。主要数据源（Himalayas、Arbeitnow 等）使用官方 API，不会被限制。
 
 ---
 
-## 注意事项
+## ⚠️ 注意事项
 
-1. **爬虫使用限制**：请合理设置请求间隔，遵守各网站的 robots.txt 和使用条款
+1. **爬虫使用限制**：请合理设置请求间隔，遵守各网站的 `robots.txt` 和使用条款
 2. **数据准确性**：爬虫依赖网站结构，如果网站改版可能需要更新爬虫。优先使用官方 API 的源更稳定。
 3. **CORS 配置**：后端已配置 CORS 白名单，如需添加新域名请修改 `api/main.py`
 4. **API 限流**：部分网站（如 Jobicy）有 API 调用频率限制，请注意间隔
@@ -696,6 +754,39 @@ A: 确保设置合理的请求间隔（`--delay` 参数），遵守各网站的 
 
 ---
 
-## 许可证
+## 🛣️ 路线图
 
-MIT License
+我们计划在未来添加以下功能：
+
+- [ ] **协作过滤推荐**：基于用户相似度的推荐算法
+- [ ] **职位订阅**：按条件订阅新职位，邮件通知
+- [ ] **多语言支持**：国际化支持
+- [ ] **深色模式**：界面主题切换
+- [ ] **移动端 App**：React Native 移动端应用
+- [ ] **数据分析**：职位市场趋势分析
+- [ ] **社区功能**：用户交流、经验分享
+
+---
+
+## 📄 许可证
+
+本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件。
+
+---
+
+## 🙏 致谢
+
+- 感谢所有提供免费 API 的远程招聘平台
+- 感谢开源社区提供的优秀工具和库
+- 感谢所有为这个项目做出贡献的人
+
+---
+
+<div align="center">
+  <p>如果这个项目对你有帮助，请给我们一个 ⭐ Star！</p>
+  <p>
+    <a href="https://github.com/your-username/RemoteRadar/stargazers">查看星标</a> •
+    <a href="https://github.com/your-username/RemoteRadar/issues">报告问题</a> •
+    <a href="https://github.com/your-username/RemoteRadar/discussions">讨论交流</a>
+  </p>
+</div>
