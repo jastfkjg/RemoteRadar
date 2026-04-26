@@ -100,6 +100,55 @@ class APIDatabaseService:
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_saved_jobs_user ON saved_jobs(user_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_saved_jobs_job ON saved_jobs(job_id)')
         
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_skills (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                skill_name TEXT NOT NULL,
+                proficiency TEXT DEFAULT 'intermediate',
+                acquired_date DATE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, skill_name)
+            )
+        ''')
+        
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_skills_user ON user_skills(user_id)')
+        
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_experiences (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                company TEXT NOT NULL,
+                position TEXT NOT NULL,
+                start_date DATE,
+                end_date DATE,
+                current INTEGER DEFAULT 0,
+                description TEXT,
+                achievements TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_experiences_user ON user_experiences(user_id)')
+        
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_preferences (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL UNIQUE,
+                preferred_industries TEXT,
+                preferred_job_types TEXT,
+                preferred_locations TEXT,
+                min_salary INTEGER,
+                max_salary INTEGER,
+                work_mode TEXT DEFAULT 'any',
+                remote_only INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
         cursor.execute("PRAGMA table_info(job_listings)")
         columns = [row[1] for row in cursor.fetchall()]
         
@@ -675,6 +724,249 @@ class APIDatabaseService:
             ''', (user_id,))
             rows = await cursor.fetchall()
             return [row['job_id'] for row in rows]
+    
+    async def get_skills(self, user_id: str) -> List[Dict[str, Any]]:
+        async with self.get_connection() as conn:
+            cursor = await conn.execute('''
+                SELECT id, user_id, skill_name, proficiency, acquired_date, created_at, updated_at
+                FROM user_skills 
+                WHERE user_id = ? 
+                ORDER BY created_at DESC
+            ''', (user_id,))
+            rows = await cursor.fetchall()
+            return [
+                {
+                    'id': row['id'],
+                    'user_id': row['user_id'],
+                    'skill_name': row['skill_name'],
+                    'proficiency': row['proficiency'],
+                    'acquired_date': row['acquired_date'],
+                    'created_at': row['created_at'],
+                    'updated_at': row['updated_at'],
+                }
+                for row in rows
+            ]
+    
+    async def add_skill(self, user_id: str, skill_name: str, proficiency: str = 'intermediate', acquired_date: Optional[str] = None) -> dict:
+        now = datetime.now().isoformat()
+        async with self.get_connection() as conn:
+            try:
+                cursor = await conn.execute('''
+                    INSERT INTO user_skills (user_id, skill_name, proficiency, acquired_date, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (user_id, skill_name, proficiency, acquired_date, now, now))
+                await conn.commit()
+                return {
+                    'success': True,
+                    'id': cursor.lastrowid,
+                    'skill_name': skill_name,
+                }
+            except sqlite3.IntegrityError:
+                return {
+                    'success': False,
+                    'error': '该技能已存在'
+                }
+    
+    async def update_skill(self, user_id: str, skill_id: int, skill_name: Optional[str] = None, proficiency: Optional[str] = None, acquired_date: Optional[str] = None) -> bool:
+        now = datetime.now().isoformat()
+        fields = []
+        values = []
+        
+        if skill_name is not None:
+            fields.append('skill_name = ?')
+            values.append(skill_name)
+        if proficiency is not None:
+            fields.append('proficiency = ?')
+            values.append(proficiency)
+        if acquired_date is not None:
+            fields.append('acquired_date = ?')
+            values.append(acquired_date)
+        
+        if not fields:
+            return False
+        
+        fields.append('updated_at = ?')
+        values.extend([now, user_id, skill_id])
+        
+        async with self.get_connection() as conn:
+            cursor = await conn.execute(f'''
+                UPDATE user_skills SET {', '.join(fields)}
+                WHERE user_id = ? AND id = ?
+            ''', values)
+            await conn.commit()
+            return cursor.rowcount > 0
+    
+    async def delete_skill(self, user_id: str, skill_id: int) -> bool:
+        async with self.get_connection() as conn:
+            cursor = await conn.execute('''
+                DELETE FROM user_skills WHERE user_id = ? AND id = ?
+            ''', (user_id, skill_id))
+            await conn.commit()
+            return cursor.rowcount > 0
+    
+    async def get_experiences(self, user_id: str) -> List[Dict[str, Any]]:
+        async with self.get_connection() as conn:
+            cursor = await conn.execute('''
+                SELECT id, user_id, company, position, start_date, end_date, current, description, achievements, created_at, updated_at
+                FROM user_experiences 
+                WHERE user_id = ? 
+                ORDER BY start_date DESC
+            ''', (user_id,))
+            rows = await cursor.fetchall()
+            return [
+                {
+                    'id': row['id'],
+                    'user_id': row['user_id'],
+                    'company': row['company'],
+                    'position': row['position'],
+                    'start_date': row['start_date'],
+                    'end_date': row['end_date'],
+                    'current': bool(row['current']),
+                    'description': row['description'],
+                    'achievements': row['achievements'],
+                    'created_at': row['created_at'],
+                    'updated_at': row['updated_at'],
+                }
+                for row in rows
+            ]
+    
+    async def add_experience(self, user_id: str, company: str, position: str, start_date: Optional[str] = None, 
+                              end_date: Optional[str] = None, current: bool = False, 
+                              description: Optional[str] = None, achievements: Optional[str] = None) -> dict:
+        now = datetime.now().isoformat()
+        async with self.get_connection() as conn:
+            cursor = await conn.execute('''
+                INSERT INTO user_experiences (user_id, company, position, start_date, end_date, current, description, achievements, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (user_id, company, position, start_date, end_date, 1 if current else 0, description, achievements, now, now))
+            await conn.commit()
+            return {
+                'success': True,
+                'id': cursor.lastrowid,
+            }
+    
+    async def update_experience(self, user_id: str, experience_id: int, **kwargs) -> bool:
+        now = datetime.now().isoformat()
+        fields = []
+        values = []
+        
+        valid_fields = ['company', 'position', 'start_date', 'end_date', 'current', 'description', 'achievements']
+        for field in valid_fields:
+            if field in kwargs:
+                if field == 'current':
+                    fields.append(f'{field} = ?')
+                    values.append(1 if kwargs[field] else 0)
+                else:
+                    fields.append(f'{field} = ?')
+                    values.append(kwargs[field])
+        
+        if not fields:
+            return False
+        
+        fields.append('updated_at = ?')
+        values.extend([now, user_id, experience_id])
+        
+        async with self.get_connection() as conn:
+            cursor = await conn.execute(f'''
+                UPDATE user_experiences SET {', '.join(fields)}
+                WHERE user_id = ? AND id = ?
+            ''', values)
+            await conn.commit()
+            return cursor.rowcount > 0
+    
+    async def delete_experience(self, user_id: str, experience_id: int) -> bool:
+        async with self.get_connection() as conn:
+            cursor = await conn.execute('''
+                DELETE FROM user_experiences WHERE user_id = ? AND id = ?
+            ''', (user_id, experience_id))
+            await conn.commit()
+            return cursor.rowcount > 0
+    
+    async def get_preferences(self, user_id: str) -> Optional[Dict[str, Any]]:
+        async with self.get_connection() as conn:
+            cursor = await conn.execute('''
+                SELECT id, user_id, preferred_industries, preferred_job_types, preferred_locations,
+                       min_salary, max_salary, work_mode, remote_only, created_at, updated_at
+                FROM user_preferences 
+                WHERE user_id = ?
+            ''', (user_id,))
+            row = await cursor.fetchone()
+            if row:
+                return {
+                    'id': row['id'],
+                    'user_id': row['user_id'],
+                    'preferred_industries': row['preferred_industries'].split(',') if row['preferred_industries'] else [],
+                    'preferred_job_types': row['preferred_job_types'].split(',') if row['preferred_job_types'] else [],
+                    'preferred_locations': row['preferred_locations'].split(',') if row['preferred_locations'] else [],
+                    'min_salary': row['min_salary'],
+                    'max_salary': row['max_salary'],
+                    'work_mode': row['work_mode'],
+                    'remote_only': bool(row['remote_only']),
+                    'created_at': row['created_at'],
+                    'updated_at': row['updated_at'],
+                }
+            return None
+    
+    async def update_preferences(self, user_id: str, **kwargs) -> dict:
+        now = datetime.now().isoformat()
+        
+        existing = await self.get_preferences(user_id)
+        
+        preferred_industries = kwargs.get('preferred_industries')
+        preferred_job_types = kwargs.get('preferred_job_types')
+        preferred_locations = kwargs.get('preferred_locations')
+        
+        industries_str = ','.join(preferred_industries) if preferred_industries else (','.join(existing['preferred_industries']) if existing else None)
+        job_types_str = ','.join(preferred_job_types) if preferred_job_types else (','.join(existing['preferred_job_types']) if existing else None)
+        locations_str = ','.join(preferred_locations) if preferred_locations else (','.join(existing['preferred_locations']) if existing else None)
+        
+        async with self.get_connection() as conn:
+            if existing:
+                await conn.execute('''
+                    UPDATE user_preferences SET
+                        preferred_industries = ?,
+                        preferred_job_types = ?,
+                        preferred_locations = ?,
+                        min_salary = ?,
+                        max_salary = ?,
+                        work_mode = ?,
+                        remote_only = ?,
+                        updated_at = ?
+                    WHERE user_id = ?
+                ''', (
+                    industries_str,
+                    job_types_str,
+                    locations_str,
+                    kwargs.get('min_salary', existing.get('min_salary')),
+                    kwargs.get('max_salary', existing.get('max_salary')),
+                    kwargs.get('work_mode', existing.get('work_mode', 'any')),
+                    1 if kwargs.get('remote_only', existing.get('remote_only', False)) else 0,
+                    now,
+                    user_id
+                ))
+            else:
+                await conn.execute('''
+                    INSERT INTO user_preferences 
+                        (user_id, preferred_industries, preferred_job_types, preferred_locations, 
+                         min_salary, max_salary, work_mode, remote_only, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    user_id,
+                    industries_str,
+                    job_types_str,
+                    locations_str,
+                    kwargs.get('min_salary'),
+                    kwargs.get('max_salary'),
+                    kwargs.get('work_mode', 'any'),
+                    1 if kwargs.get('remote_only', False) else 0,
+                    now,
+                    now
+                ))
+            await conn.commit()
+        
+        return {
+            'success': True,
+        }
 
 
 db_service = APIDatabaseService()

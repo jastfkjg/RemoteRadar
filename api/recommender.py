@@ -19,6 +19,30 @@ RECOMMEND_LIMIT = int(os.getenv("RECOMMEND_LIMIT", "20"))
 
 
 @dataclass
+class UserSkill:
+    skill_name: str
+    proficiency: str
+
+
+@dataclass
+class UserExperience:
+    company: str
+    position: str
+    current: bool
+
+
+@dataclass
+class UserPreferences:
+    preferred_industries: List[str]
+    preferred_job_types: List[str]
+    preferred_locations: List[str]
+    min_salary: Optional[int]
+    max_salary: Optional[int]
+    work_mode: str
+    remote_only: bool
+
+
+@dataclass
 class UserProfile:
     user_id: str
     categories: List[str]
@@ -27,6 +51,9 @@ class UserProfile:
     locations: List[str]
     min_salary: Optional[int]
     max_salary: Optional[int]
+    skills: List[UserSkill]
+    experiences: List[UserExperience]
+    preferences: Optional[UserPreferences]
 
 
 @dataclass
@@ -98,6 +125,50 @@ class Recommender:
         ''', (user_id,))
         row = cursor.fetchone()
         
+        cursor.execute('''
+            SELECT skill_name, proficiency FROM user_skills WHERE user_id = ?
+        ''', (user_id,))
+        skill_rows = cursor.fetchall()
+        skills = [
+            UserSkill(
+                skill_name=row['skill_name'],
+                proficiency=row['proficiency']
+            )
+            for row in skill_rows
+        ]
+        
+        cursor.execute('''
+            SELECT company, position, current FROM user_experiences WHERE user_id = ?
+        ''', (user_id,))
+        exp_rows = cursor.fetchall()
+        experiences = [
+            UserExperience(
+                company=row['company'],
+                position=row['position'],
+                current=bool(row['current'])
+            )
+            for row in exp_rows
+        ]
+        
+        cursor.execute('''
+            SELECT preferred_industries, preferred_job_types, preferred_locations,
+                   min_salary, max_salary, work_mode, remote_only
+            FROM user_preferences WHERE user_id = ?
+        ''', (user_id,))
+        pref_row = cursor.fetchone()
+        
+        preferences = None
+        if pref_row:
+            preferences = UserPreferences(
+                preferred_industries=pref_row['preferred_industries'].split(',') if pref_row['preferred_industries'] else [],
+                preferred_job_types=pref_row['preferred_job_types'].split(',') if pref_row['preferred_job_types'] else [],
+                preferred_locations=pref_row['preferred_locations'].split(',') if pref_row['preferred_locations'] else [],
+                min_salary=pref_row['min_salary'],
+                max_salary=pref_row['max_salary'],
+                work_mode=pref_row['work_mode'] or 'any',
+                remote_only=bool(pref_row['remote_only']),
+            )
+        
         if row:
             profile = UserProfile(
                 user_id=row['user_id'],
@@ -107,6 +178,9 @@ class Recommender:
                 locations=row['locations'].split(',') if row['locations'] else [],
                 min_salary=row['min_salary'],
                 max_salary=row['max_salary'],
+                skills=skills,
+                experiences=experiences,
+                preferences=preferences,
             )
         else:
             cursor.execute('''
@@ -123,6 +197,9 @@ class Recommender:
                 locations=[],
                 min_salary=None,
                 max_salary=None,
+                skills=skills,
+                experiences=experiences,
+                preferences=preferences,
             )
         
         conn.close()
@@ -258,6 +335,79 @@ class Recommender:
         job_cats = set(job.get_categories_list())
         job_techs = set(job.get_tech_stacks_list())
         job_seniorities = set(job.get_seniority_list())
+        
+        if profile.skills:
+            user_skill_names = {s.skill_name.lower() for s in profile.skills}
+            user_skill_objects = {s.skill_name.lower(): s for s in profile.skills}
+            
+            matched_skills = []
+            for job_tech in job_techs:
+                job_tech_lower = job_tech.lower()
+                if job_tech_lower in user_skill_names:
+                    matched_skills.append(job_tech)
+                    
+                    skill_obj = user_skill_objects.get(job_tech_lower)
+                    if skill_obj:
+                        proficiency_bonus = {
+                            'beginner': 1,
+                            'intermediate': 2,
+                            'advanced': 3,
+                            'expert': 4,
+                        }.get(skill_obj.proficiency, 2)
+                        score += proficiency_bonus * 1.5
+            
+            if matched_skills:
+                reasons.append(f"匹配技能: {', '.join(matched_skills)}")
+        
+        if profile.experiences:
+            for exp in profile.experiences:
+                exp_title = exp.position.lower()
+                job_title = job.title.lower()
+                
+                title_keywords = ['developer', 'engineer', 'designer', 'manager', 'lead', 'senior', 'junior', 'architect', 'analyst']
+                for kw in title_keywords:
+                    if kw in exp_title and kw in job_title:
+                        score += 3
+                        reasons.append(f"匹配职位类型: 您有 {exp.position} 经验")
+                        break
+                
+                if exp.current and job_seniorities:
+                    if 'senior' in exp_title and 'senior' in job_seniorities:
+                        score += 2
+                        reasons.append("匹配当前职级: 高级职位")
+                    elif 'junior' in exp_title and 'junior' in job_seniorities:
+                        score += 2
+                        reasons.append("匹配当前职级: 初级职位")
+        
+        if profile.preferences:
+            prefs = profile.preferences
+            
+            if prefs.preferred_industries:
+                for industry in prefs.preferred_industries:
+                    if job_cats and industry in job_cats:
+                        score += 4
+                        reasons.append(f"匹配期望行业: {industry}")
+                        break
+            
+            if prefs.preferred_job_types and job.job_type:
+                job_type_lower = job.job_type.lower()
+                for pref_type in prefs.preferred_job_types:
+                    if pref_type.lower() in job_type_lower:
+                        score += 2
+                        reasons.append(f"匹配期望职位类型: {pref_type}")
+                        break
+            
+            if prefs.preferred_locations and job.location:
+                for loc in prefs.preferred_locations:
+                    if loc.lower() in job.location.lower():
+                        score += 2
+                        reasons.append(f"匹配期望地点: {loc}")
+                        break
+            
+            if prefs.remote_only:
+                if job.location and ('remote' in job.location.lower() or '远程' in job.location):
+                    score += 3
+                    reasons.append("仅远程职位: 匹配")
         
         if profile.categories:
             profile_cats = set(profile.categories)

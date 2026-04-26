@@ -2,7 +2,11 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import type {
   Job, JobListResponse, StatsResponse, FilterOptions,
   User, AuthResponse, RecommendationResponse,
-  UserProfile, SavedJobsResponse, SaveJobResponse
+  UserProfile, SavedJobsResponse, SaveJobResponse,
+  UserSkill, UserSkillCreate, UserSkillUpdate,
+  UserExperience, UserExperienceCreate, UserExperienceUpdate,
+  UserPreferences, UserPreferencesUpdate,
+  CompleteProfile
 } from '../types';
 
 const TOKEN_KEY = 'remoteradar_token';
@@ -212,6 +216,69 @@ export const savedJobsApi = {
 
   checkSaved: async (jobId: number): Promise<{ job_id: number; is_saved: boolean }> => {
     const response = await api.get(`/saved-jobs/check/${jobId}`);
+    return response.data;
+  },
+};
+
+export const skillsApi = {
+  getSkills: async (): Promise<UserSkill[]> => {
+    const response = await api.get<UserSkill[]>('/profile/skills');
+    return response.data;
+  },
+
+  addSkill: async (skill: UserSkillCreate): Promise<UserSkill> => {
+    const response = await api.post<UserSkill>('/profile/skills', skill);
+    return response.data;
+  },
+
+  updateSkill: async (skillId: number, skill: UserSkillUpdate): Promise<UserSkill> => {
+    const response = await api.put<UserSkill>(`/profile/skills/${skillId}`, skill);
+    return response.data;
+  },
+
+  deleteSkill: async (skillId: number): Promise<{ success: boolean; message: string }> => {
+    const response = await api.delete(`/profile/skills/${skillId}`);
+    return response.data;
+  },
+};
+
+export const experiencesApi = {
+  getExperiences: async (): Promise<UserExperience[]> => {
+    const response = await api.get<UserExperience[]>('/profile/experiences');
+    return response.data;
+  },
+
+  addExperience: async (experience: UserExperienceCreate): Promise<UserExperience> => {
+    const response = await api.post<UserExperience>('/profile/experiences', experience);
+    return response.data;
+  },
+
+  updateExperience: async (experienceId: number, experience: UserExperienceUpdate): Promise<UserExperience> => {
+    const response = await api.put<UserExperience>(`/profile/experiences/${experienceId}`, experience);
+    return response.data;
+  },
+
+  deleteExperience: async (experienceId: number): Promise<{ success: boolean; message: string }> => {
+    const response = await api.delete(`/profile/experiences/${experienceId}`);
+    return response.data;
+  },
+};
+
+export const preferencesApi = {
+  getPreferences: async (): Promise<UserPreferences | null> => {
+    const response = await api.get<UserPreferences | null>('/profile/preferences');
+    return response.data;
+  },
+
+  updatePreferences: async (preferences: UserPreferencesUpdate): Promise<UserPreferences> => {
+    const response = await api.put<UserPreferences>('/profile/preferences', preferences);
+    return response.data;
+  },
+};
+
+export const profileApi = {
+  getCompleteProfile: async (): Promise<CompleteProfile> => {
+    const response = await api.get<CompleteProfile>('/profile/me');
     return response.data;
   },
 };

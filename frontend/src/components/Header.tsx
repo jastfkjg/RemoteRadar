@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Search, Bell, Menu, X, RefreshCw, TrendingUp,
-  Sparkles, User, LogOut, ChevronDown, Bookmark,
-  Home
+  User, LogOut, ChevronDown, Bookmark, Home, Settings
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -75,24 +74,6 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           <div className="hidden md:flex items-center space-x-3">
-            <Link
-              to="/"
-              className="flex items-center space-x-1 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <Home className="w-4 h-4" />
-              <span>首页</span>
-            </Link>
-
-            {isAuthenticated && (
-              <Link
-                to="/recommendations"
-                className="flex items-center space-x-1 px-3 py-2 text-sm bg-gradient-to-r from-blue-50 to-purple-50 text-blue-700 hover:from-blue-100 hover:to-purple-100 rounded-lg transition-colors border border-blue-100"
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>推荐</span>
-              </Link>
-            )}
-
             <form onSubmit={handleSearchSubmit} className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
@@ -138,21 +119,12 @@ export const Header: React.FC<HeaderProps> = ({
                     </div>
 
                     <Link
-                      to="/"
+                      to="/profile"
                       onClick={() => setUserMenuOpen(false)}
                       className="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                     >
-                      <Home className="w-4 h-4 text-gray-400" />
-                      <span>浏览职位</span>
-                    </Link>
-
-                    <Link
-                      to="/recommendations"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                    >
-                      <Sparkles className="w-4 h-4 text-purple-400" />
-                      <span>个性化推荐</span>
+                      <Settings className="w-4 h-4 text-purple-400" />
+                      <span>个人中心</span>
                     </Link>
 
                     <Link
@@ -228,17 +200,6 @@ export const Header: React.FC<HeaderProps> = ({
                 <Home className="w-5 h-5 text-gray-500" />
                 <span>首页</span>
               </Link>
-
-              {isAuthenticated && (
-                <Link
-                  to="/recommendations"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center space-x-3 px-3 py-2.5 text-blue-700 bg-blue-50 rounded-lg"
-                >
-                  <Sparkles className="w-5 h-5" />
-                  <span>个性化推荐</span>
-                </Link>
-              )}
 
               <button
                 onClick={() => {
