@@ -1,5 +1,5 @@
-import React from 'react';
-import { MapPin, Clock, Building2, Briefcase, DollarSign, ExternalLink } from 'lucide-react';
+import React, { useState } from 'react';
+import { MapPin, Clock, Building2, Briefcase, DollarSign, ExternalLink, Bookmark, BookmarkCheck, Loader2 } from 'lucide-react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
@@ -11,24 +11,55 @@ dayjs.locale('zh-cn');
 interface JobCardProps {
   job: Job;
   onClick: () => void;
+  isAuthenticated?: boolean;
+  isSaved?: boolean;
+  onSave?: (jobId: number, isSaved: boolean) => void;
 }
 
 const sourceColors: Record<string, string> = {
   v2ex: 'bg-orange-100 text-orange-700',
   wework: 'bg-green-100 text-green-700',
   remoteok: 'bg-purple-100 text-purple-700',
+  himalayas: 'bg-teal-100 text-teal-700',
+  remotive: 'bg-blue-100 text-blue-700',
+  weworkremotely: 'bg-emerald-100 text-emerald-700',
+  justremote: 'bg-pink-100 text-pink-700',
 };
 
 const sourceNames: Record<string, string> = {
   v2ex: 'V2EX',
   wework: 'Wework Remotely',
   remoteok: 'RemoteOk',
+  himalayas: 'Himalayas',
+  remotive: 'Remotive',
+  weworkremotely: 'We Work Remotely',
+  justremote: 'JustRemote',
 };
 
-export const JobCard: React.FC<JobCardProps> = ({ job, onClick }) => {
+export const JobCard: React.FC<JobCardProps> = ({ 
+  job, 
+  onClick, 
+  isAuthenticated = false,
+  isSaved = false,
+  onSave 
+}) => {
+  const [isSaving, setIsSaving] = useState(false);
+
   const formatTime = (time: string | null) => {
     if (!time) return '未知';
     return dayjs(time).fromNow();
+  };
+
+  const handleSaveClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onSave || !job.id || isSaving) return;
+    
+    setIsSaving(true);
+    try {
+      await onSave(job.id, isSaved);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const getSourceBadge = () => {
@@ -63,14 +94,15 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onClick }) => {
 
   return (
     <div
-      onClick={onClick}
-      className="bg-white rounded-xl border border-gray-200 p-5 hover:border-blue-300 hover:shadow-lg transition-all cursor-pointer group"
+      className="bg-white rounded-xl border border-gray-200 p-5 hover:border-blue-300 hover:shadow-lg transition-all group"
     >
       <div className="flex items-start space-x-4">
-        {getCompanyLogo()}
+        <div onClick={onClick} className="flex-shrink-0 cursor-pointer">
+          {getCompanyLogo()}
+        </div>
         
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between">
+        <div className="flex-1 min-w-0" onClick={onClick}>
+          <div className="flex items-start justify-between cursor-pointer">
             <div className="flex-1">
               <div className="flex items-center space-x-2 mb-1">
                 {getSourceBadge()}
@@ -91,7 +123,30 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onClick }) => {
               </p>
             </div>
             
-            <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-blue-500 flex-shrink-0 mt-1" />
+            <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
+              {isAuthenticated && onSave && job.id && (
+                <button
+                  onClick={handleSaveClick}
+                  disabled={isSaving}
+                  className={`p-2 rounded-lg transition-colors ${
+                    isSaved
+                      ? 'bg-pink-50 text-pink-600 hover:bg-pink-100'
+                      : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
+                  } disabled:opacity-50`}
+                  title={isSaved ? '取消收藏' : '收藏'}
+                >
+                  {isSaving ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : isSaved ? (
+                    <BookmarkCheck className="w-5 h-5 fill-current" />
+                  ) : (
+                    <Bookmark className="w-5 h-5" />
+                  )}
+                </button>
+              )}
+              
+              <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-blue-500 flex-shrink-0 mt-1" />
+            </div>
           </div>
           
           <div className="flex flex-wrap items-center gap-3 mt-3 text-sm text-gray-500">
