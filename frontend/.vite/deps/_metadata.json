@@ -1,8 +1,76 @@
 {
-  "hash": "f106231f",
+  "hash": "702c3aa4",
   "configHash": "360270d5",
-  "lockfileHash": "e3b0c442",
-  "browserHash": "1bd16701",
-  "optimized": {},
-  "chunks": {}
+  "lockfileHash": "dec61a79",
+  "browserHash": "a94efc29",
+  "optimized": {
+    "react/jsx-dev-runtime": {
+      "src": "../../node_modules/react/jsx-dev-runtime.js",
+      "file": "react_jsx-dev-runtime.js",
+      "fileHash": "ce0fafdb",
+      "needsInterop": true
+    },
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "3107a7cd",
+      "needsInterop": true
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "e29a4059",
+      "needsInterop": true
+    },
+    "react-router-dom": {
+      "src": "../../node_modules/react-router-dom/dist/index.js",
+      "file": "react-router-dom.js",
+      "fileHash": "b4bf41c1",
+      "needsInterop": false
+    },
+    "lucide-react": {
+      "src": "../../node_modules/lucide-react/dist/esm/lucide-react.js",
+      "file": "lucide-react.js",
+      "fileHash": "f8f96c80",
+      "needsInterop": false
+    },
+    "dayjs": {
+      "src": "../../node_modules/dayjs/dayjs.min.js",
+      "file": "dayjs.js",
+      "fileHash": "3dc24edb",
+      "needsInterop": true
+    },
+    "dayjs/plugin/relativeTime": {
+      "src": "../../node_modules/dayjs/plugin/relativeTime.js",
+      "file": "dayjs_plugin_relativeTime.js",
+      "fileHash": "10592af5",
+      "needsInterop": true
+    },
+    "dayjs/locale/zh-cn": {
+      "src": "../../node_modules/dayjs/locale/zh-cn.js",
+      "file": "dayjs_locale_zh-cn.js",
+      "fileHash": "506fa6b8",
+      "needsInterop": true
+    },
+    "axios": {
+      "src": "../../node_modules/axios/index.js",
+      "file": "axios.js",
+      "fileHash": "8827542a",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-TNTPHDQH": {
+      "file": "chunk-TNTPHDQH.js"
+    },
+    "chunk-32E4H3EV": {
+      "file": "chunk-32E4H3EV.js"
+    },
+    "chunk-DPLKJ6H7": {
+      "file": "chunk-DPLKJ6H7.js"
+    },
+    "chunk-G3PMV62Z": {
+      "file": "chunk-G3PMV62Z.js"
+    }
+  }
 }
