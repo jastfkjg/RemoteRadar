@@ -71,6 +71,35 @@ class APIDatabaseService:
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_actions_job ON user_actions(job_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_actions_created ON user_actions(created_at)')
         
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL UNIQUE,
+                email TEXT NOT NULL UNIQUE,
+                username TEXT NOT NULL,
+                password_hash TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_login TIMESTAMP,
+                is_active INTEGER DEFAULT 1
+            )
+        ''')
+        
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_user_id ON users(user_id)')
+        
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS saved_jobs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                job_id INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, job_id)
+            )
+        ''')
+        
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_saved_jobs_user ON saved_jobs(user_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_saved_jobs_job ON saved_jobs(job_id)')
+        
         cursor.execute("PRAGMA table_info(job_listings)")
         columns = [row[1] for row in cursor.fetchall()]
         
@@ -524,6 +553,128 @@ class APIDatabaseService:
             'updated': updated_count,
             'job_ids': job_ids,
         }
+    
+    async def create_user(self, email: str, username: str, password_hash: str) -> dict:
+        import uuid
+        user_id = f"user_{uuid.uuid4().hex[:12]}"
+        now = datetime.now().isoformat()
+        
+        async with self.get_connection() as conn:
+            try:
+                cursor = await conn.execute('''
+                    INSERT INTO users (user_id, email, username, password_hash, created_at, is_active)
+                    VALUES (?, ?, ?, ?, ?, 1)
+                ''', (user_id, email, username, password_hash, now))
+                await conn.commit()
+                return {
+                    'success': True,
+                    'user_id': user_id,
+                    'id': cursor.lastrowid
+                }
+            except sqlite3.IntegrityError as e:
+                if 'UNIQUE constraint failed: users.email' in str(e):
+                    return {
+                        'success': False,
+                        'error': '邮箱已被注册'
+                    }
+                return {
+                    'success': False,
+                    'error': str(e)
+                }
+    
+    async def get_user_by_email(self, email: str) -> Optional[dict]:
+        async with self.get_connection() as conn:
+            cursor = await conn.execute('''
+                SELECT id, user_id, email, username, password_hash, created_at, last_login, is_active
+                FROM users WHERE email = ?
+            ''', (email,))
+            row = await cursor.fetchone()
+            if row:
+                return {
+                    'id': row['id'],
+                    'user_id': row['user_id'],
+                    'email': row['email'],
+                    'username': row['username'],
+                    'password_hash': row['password_hash'],
+                    'created_at': row['created_at'],
+                    'last_login': row['last_login'],
+                    'is_active': row['is_active']
+                }
+            return None
+    
+    async def get_user_by_user_id(self, user_id: str) -> Optional[dict]:
+        async with self.get_connection() as conn:
+            cursor = await conn.execute('''
+                SELECT id, user_id, email, username, password_hash, created_at, last_login, is_active
+                FROM users WHERE user_id = ?
+            ''', (user_id,))
+            row = await cursor.fetchone()
+            if row:
+                return {
+                    'id': row['id'],
+                    'user_id': row['user_id'],
+                    'email': row['email'],
+                    'username': row['username'],
+                    'password_hash': row['password_hash'],
+                    'created_at': row['created_at'],
+                    'last_login': row['last_login'],
+                    'is_active': row['is_active']
+                }
+            return None
+    
+    async def update_last_login(self, user_id: str) -> bool:
+        now = datetime.now().isoformat()
+        async with self.get_connection() as conn:
+            await conn.execute('''
+                UPDATE users SET last_login = ? WHERE user_id = ?
+            ''', (now, user_id))
+            await conn.commit()
+            return True
+    
+    async def save_job(self, user_id: str, job_id: int) -> dict:
+        now = datetime.now().isoformat()
+        async with self.get_connection() as conn:
+            try:
+                cursor = await conn.execute('''
+                    INSERT INTO saved_jobs (user_id, job_id, created_at)
+                    VALUES (?, ?, ?)
+                ''', (user_id, job_id, now))
+                await conn.commit()
+                return {
+                    'success': True,
+                    'saved': True,
+                    'id': cursor.lastrowid
+                }
+            except sqlite3.IntegrityError:
+                return {
+                    'success': True,
+                    'saved': False,
+                    'message': '已经收藏过了'
+                }
+    
+    async def unsave_job(self, user_id: str, job_id: int) -> bool:
+        async with self.get_connection() as conn:
+            cursor = await conn.execute('''
+                DELETE FROM saved_jobs WHERE user_id = ? AND job_id = ?
+            ''', (user_id, job_id))
+            await conn.commit()
+            return cursor.rowcount > 0
+    
+    async def is_job_saved(self, user_id: str, job_id: int) -> bool:
+        async with self.get_connection() as conn:
+            cursor = await conn.execute('''
+                SELECT id FROM saved_jobs WHERE user_id = ? AND job_id = ?
+            ''', (user_id, job_id))
+            row = await cursor.fetchone()
+            return row is not None
+    
+    async def get_saved_jobs(self, user_id: str) -> List[int]:
+        async with self.get_connection() as conn:
+            cursor = await conn.execute('''
+                SELECT job_id FROM saved_jobs WHERE user_id = ? ORDER BY created_at DESC
+            ''', (user_id,))
+            rows = await cursor.fetchall()
+            return [row['job_id'] for row in rows]
 
 
 db_service = APIDatabaseService()
