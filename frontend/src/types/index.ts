@@ -126,3 +126,89 @@ export interface SaveJobResponse {
   saved: boolean;
   message: string;
 }
+
+export interface UserSkill {
+  id: number;
+  user_id: string;
+  skill_name: string;
+  proficiency: string;
+  acquired_date: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface UserSkillCreate {
+  skill_name: string;
+  proficiency: string;
+  acquired_date?: string;
+}
+
+export interface UserSkillUpdate {
+  skill_name?: string;
+  proficiency?: string;
+  acquired_date?: string;
+}
+
+export interface UserExperience {
+  id: number;
+  user_id: string;
+  company: string;
+  position: string;
+  start_date: string | null;
+  end_date: string | null;
+  current: boolean;
+  description: string | null;
+  achievements: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface UserExperienceCreate {
+  company: string;
+  position: string;
+  start_date?: string;
+  end_date?: string;
+  current: boolean;
+  description?: string;
+  achievements?: string;
+}
+
+export interface UserExperienceUpdate {
+  company?: string;
+  position?: string;
+  start_date?: string;
+  end_date?: string;
+  current?: boolean;
+  description?: string;
+  achievements?: string;
+}
+
+export interface UserPreferences {
+  user_id: string;
+  preferred_industries: string[];
+  preferred_job_types: string[];
+  preferred_locations: string[];
+  min_salary: number | null;
+  max_salary: number | null;
+  work_mode: string;
+  remote_only: boolean;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface UserPreferencesUpdate {
+  preferred_industries?: string[];
+  preferred_job_types?: string[];
+  preferred_locations?: string[];
+  min_salary?: number | null;
+  max_salary?: number | null;
+  work_mode?: string;
+  remote_only?: boolean;
+}
+
+export interface CompleteProfile {
+  user: User;
+  skills: UserSkill[];
+  experiences: UserExperience[];
+  preferences: UserPreferences | null;
+}

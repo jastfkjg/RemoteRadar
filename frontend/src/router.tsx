@@ -6,6 +6,7 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { RecommendationsPage } from './pages/RecommendationsPage';
 import { SavedJobsPage } from './pages/SavedJobsPage';
+import { ProfilePage } from './pages/ProfilePage';
 import { AuthProvider } from './contexts/AuthContext';
 
 const router = createBrowserRouter([
@@ -36,6 +37,10 @@ const router = createBrowserRouter([
   {
     path: '/saved',
     element: <SavedJobsPage />,
+  },
+  {
+    path: '/profile',
+    element: <ProfilePage />,
   },
 ]);
 

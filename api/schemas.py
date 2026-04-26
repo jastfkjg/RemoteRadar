@@ -184,3 +184,101 @@ class SaveJobResponse(BaseModel):
 class SavedJobsResponse(BaseModel):
     job_ids: List[int]
     count: int
+
+
+class UserSkill(BaseModel):
+    id: int
+    user_id: str
+    skill_name: str
+    proficiency: str = "intermediate"
+    acquired_date: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    
+    model_config = {
+        "from_attributes": True,
+    }
+
+
+class UserSkillCreate(BaseModel):
+    skill_name: str
+    proficiency: str = "intermediate"
+    acquired_date: Optional[str] = None
+
+
+class UserSkillUpdate(BaseModel):
+    skill_name: Optional[str] = None
+    proficiency: Optional[str] = None
+    acquired_date: Optional[str] = None
+
+
+class UserExperience(BaseModel):
+    id: int
+    user_id: str
+    company: str
+    position: str
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    current: bool = False
+    description: Optional[str] = None
+    achievements: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    
+    model_config = {
+        "from_attributes": True,
+    }
+
+
+class UserExperienceCreate(BaseModel):
+    company: str
+    position: str
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    current: bool = False
+    description: Optional[str] = None
+    achievements: Optional[str] = None
+
+
+class UserExperienceUpdate(BaseModel):
+    company: Optional[str] = None
+    position: Optional[str] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    current: Optional[bool] = None
+    description: Optional[str] = None
+    achievements: Optional[str] = None
+
+
+class UserPreferences(BaseModel):
+    user_id: str
+    preferred_industries: List[str] = []
+    preferred_job_types: List[str] = []
+    preferred_locations: List[str] = []
+    min_salary: Optional[int] = None
+    max_salary: Optional[int] = None
+    work_mode: str = "any"
+    remote_only: bool = False
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    
+    model_config = {
+        "from_attributes": True,
+    }
+
+
+class UserPreferencesUpdate(BaseModel):
+    preferred_industries: Optional[List[str]] = None
+    preferred_job_types: Optional[List[str]] = None
+    preferred_locations: Optional[List[str]] = None
+    min_salary: Optional[int] = None
+    max_salary: Optional[int] = None
+    work_mode: Optional[str] = None
+    remote_only: Optional[bool] = None
+
+
+class ProfileCompleteResponse(BaseModel):
+    user: AuthUser
+    skills: List[UserSkill] = []
+    experiences: List[UserExperience] = []
+    preferences: Optional[UserPreferences] = None

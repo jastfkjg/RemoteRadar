@@ -8,7 +8,11 @@ from api.schemas import (
     UserProfileSchema, UserProfileUpdate, UserActionSchema,
     RecommendationResponse, InferredProfileResponse,
     AuthUser, AuthRegisterRequest, AuthLoginRequest, AuthTokenResponse,
-    SaveJobRequest, SaveJobResponse, SavedJobsResponse
+    SaveJobRequest, SaveJobResponse, SavedJobsResponse,
+    UserSkill, UserSkillCreate, UserSkillUpdate,
+    UserExperience, UserExperienceCreate, UserExperienceUpdate,
+    UserPreferences, UserPreferencesUpdate,
+    ProfileCompleteResponse
 )
 from api.database_service import db_service
 from api.auth import get_api_key, get_api_key_optional, get_current_user, get_current_user_required
@@ -413,3 +417,226 @@ async def check_saved_job(
         "job_id": job_id,
         "is_saved": is_saved,
     }
+
+
+@router.get("/profile/skills", response_model=List[UserSkill])
+async def get_user_skills(current_user: dict = Depends(get_current_user_required)):
+    skills = await db_service.get_skills(current_user['user_id'])
+    return [UserSkill(**skill) for skill in skills]
+
+
+@router.post("/profile/skills", response_model=UserSkill)
+async def add_skill(
+    request: UserSkillCreate,
+    current_user: dict = Depends(get_current_user_required)
+):
+    result = await db_service.add_skill(
+        user_id=current_user['user_id'],
+        skill_name=request.skill_name,
+        proficiency=request.proficiency,
+        acquired_date=request.acquired_date
+    )
+    
+    if not result['success']:
+        raise HTTPException(status_code=400, detail=result.get('error', '添加技能失败'))
+    
+    skills = await db_service.get_skills(current_user['user_id'])
+    for skill in skills:
+        if skill['id'] == result['id']:
+            return UserSkill(**skill)
+    
+    raise HTTPException(status_code=500, detail='获取技能失败')
+
+
+@router.put("/profile/skills/{skill_id}", response_model=UserSkill)
+async def update_skill(
+    skill_id: int,
+    request: UserSkillUpdate,
+    current_user: dict = Depends(get_current_user_required)
+):
+    result = await db_service.update_skill(
+        user_id=current_user['user_id'],
+        skill_id=skill_id,
+        skill_name=request.skill_name,
+        proficiency=request.proficiency,
+        acquired_date=request.acquired_date
+    )
+    
+    if not result:
+        raise HTTPException(status_code=404, detail='技能不存在')
+    
+    skills = await db_service.get_skills(current_user['user_id'])
+    for skill in skills:
+        if skill['id'] == skill_id:
+            return UserSkill(**skill)
+    
+    raise HTTPException(status_code=500, detail='获取技能失败')
+
+
+@router.delete("/profile/skills/{skill_id}")
+async def delete_skill(
+    skill_id: int,
+    current_user: dict = Depends(get_current_user_required)
+):
+    result = await db_service.delete_skill(current_user['user_id'], skill_id)
+    
+    if not result:
+        raise HTTPException(status_code=404, detail='技能不存在')
+    
+    return {"success": True, "message": "技能已删除"}
+
+
+@router.get("/profile/experiences", response_model=List[UserExperience])
+async def get_user_experiences(current_user: dict = Depends(get_current_user_required)):
+    experiences = await db_service.get_experiences(current_user['user_id'])
+    return [UserExperience(**exp) for exp in experiences]
+
+
+@router.post("/profile/experiences", response_model=UserExperience)
+async def add_experience(
+    request: UserExperienceCreate,
+    current_user: dict = Depends(get_current_user_required)
+):
+    result = await db_service.add_experience(
+        user_id=current_user['user_id'],
+        company=request.company,
+        position=request.position,
+        start_date=request.start_date,
+        end_date=request.end_date,
+        current=request.current,
+        description=request.description,
+        achievements=request.achievements
+    )
+    
+    if not result['success']:
+        raise HTTPException(status_code=400, detail='添加工作经验失败')
+    
+    experiences = await db_service.get_experiences(current_user['user_id'])
+    for exp in experiences:
+        if exp['id'] == result['id']:
+            return UserExperience(**exp)
+    
+    raise HTTPException(status_code=500, detail='获取工作经验失败')
+
+
+@router.put("/profile/experiences/{experience_id}", response_model=UserExperience)
+async def update_experience(
+    experience_id: int,
+    request: UserExperienceUpdate,
+    current_user: dict = Depends(get_current_user_required)
+):
+    update_data = {}
+    if request.company is not None:
+        update_data['company'] = request.company
+    if request.position is not None:
+        update_data['position'] = request.position
+    if request.start_date is not None:
+        update_data['start_date'] = request.start_date
+    if request.end_date is not None:
+        update_data['end_date'] = request.end_date
+    if request.current is not None:
+        update_data['current'] = request.current
+    if request.description is not None:
+        update_data['description'] = request.description
+    if request.achievements is not None:
+        update_data['achievements'] = request.achievements
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail='没有提供更新内容')
+    
+    result = await db_service.update_experience(
+        user_id=current_user['user_id'],
+        experience_id=experience_id,
+        **update_data
+    )
+    
+    if not result:
+        raise HTTPException(status_code=404, detail='工作经验不存在')
+    
+    experiences = await db_service.get_experiences(current_user['user_id'])
+    for exp in experiences:
+        if exp['id'] == experience_id:
+            return UserExperience(**exp)
+    
+    raise HTTPException(status_code=500, detail='获取工作经验失败')
+
+
+@router.delete("/profile/experiences/{experience_id}")
+async def delete_experience(
+    experience_id: int,
+    current_user: dict = Depends(get_current_user_required)
+):
+    result = await db_service.delete_experience(current_user['user_id'], experience_id)
+    
+    if not result:
+        raise HTTPException(status_code=404, detail='工作经验不存在')
+    
+    return {"success": True, "message": "工作经验已删除"}
+
+
+@router.get("/profile/preferences", response_model=Optional[UserPreferences])
+async def get_user_preferences(current_user: dict = Depends(get_current_user_required)):
+    preferences = await db_service.get_preferences(current_user['user_id'])
+    if preferences:
+        return UserPreferences(**preferences)
+    return None
+
+
+@router.put("/profile/preferences", response_model=UserPreferences)
+async def update_preferences(
+    request: UserPreferencesUpdate,
+    current_user: dict = Depends(get_current_user_required)
+):
+    update_data = {}
+    if request.preferred_industries is not None:
+        update_data['preferred_industries'] = request.preferred_industries
+    if request.preferred_job_types is not None:
+        update_data['preferred_job_types'] = request.preferred_job_types
+    if request.preferred_locations is not None:
+        update_data['preferred_locations'] = request.preferred_locations
+    if request.min_salary is not None:
+        update_data['min_salary'] = request.min_salary
+    if request.max_salary is not None:
+        update_data['max_salary'] = request.max_salary
+    if request.work_mode is not None:
+        update_data['work_mode'] = request.work_mode
+    if request.remote_only is not None:
+        update_data['remote_only'] = request.remote_only
+    
+    result = await db_service.update_preferences(
+        user_id=current_user['user_id'],
+        **update_data
+    )
+    
+    if not result['success']:
+        raise HTTPException(status_code=500, detail='更新工作倾向失败')
+    
+    preferences = await db_service.get_preferences(current_user['user_id'])
+    if preferences:
+        return UserPreferences(**preferences)
+    
+    raise HTTPException(status_code=500, detail='获取工作倾向失败')
+
+
+@router.get("/profile/me", response_model=ProfileCompleteResponse)
+async def get_complete_profile(current_user: dict = Depends(get_current_user_required)):
+    user_info = await db_service.get_user_by_user_id(current_user['user_id'])
+    skills = await db_service.get_skills(current_user['user_id'])
+    experiences = await db_service.get_experiences(current_user['user_id'])
+    preferences = await db_service.get_preferences(current_user['user_id'])
+    
+    user = AuthUser(
+        id=user_info['id'],
+        user_id=user_info['user_id'],
+        email=user_info['email'],
+        username=user_info['username'],
+        created_at=user_info.get('created_at'),
+        last_login=user_info.get('last_login'),
+    )
+    
+    return ProfileCompleteResponse(
+        user=user,
+        skills=[UserSkill(**s) for s in skills],
+        experiences=[UserExperience(**e) for e in experiences],
+        preferences=UserPreferences(**preferences) if preferences else None,
+    )

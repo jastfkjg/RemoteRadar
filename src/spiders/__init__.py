@@ -10,3 +10,6 @@ from .workingnomads_spider import WorkingNomadsSpider
 from .nofluffjobs_spider import NoFluffJobsSpider
 from .himalayas_spider import HimalayasSpider
 from .justremote_spider import JustRemoteSpider
+from .arbeitnow_spider import ArbeitnowSpider
+from .jobicy_spider import JobicySpider
+from .empllo_spider import EmplloSpider
