@@ -587,7 +587,7 @@ class APIDatabaseService:
         new_count = 0
         updated_count = 0
         job_ids = []
-        
+
         for job_data in jobs:
             job_id, is_new = await self.insert_or_update_job(job_data)
             job_ids.append(job_id)
@@ -595,13 +595,26 @@ class APIDatabaseService:
                 new_count += 1
             else:
                 updated_count += 1
-        
+
+        deleted = await self.delete_older_than(days=30)
+
         return {
             'total': len(jobs),
             'new': new_count,
             'updated': updated_count,
+            'deleted_old': deleted,
             'job_ids': job_ids,
         }
+
+    async def delete_older_than(self, days: int = 30) -> int:
+        cutoff = (datetime.now() - timedelta(days=days)).isoformat()
+        async with self.get_connection() as conn:
+            cursor = await conn.execute(
+                'DELETE FROM job_listings WHERE posted_at < ?',
+                (cutoff,)
+            )
+            await conn.commit()
+            return cursor.rowcount
     
     async def create_user(self, email: str, username: str, password_hash: str) -> dict:
         import uuid

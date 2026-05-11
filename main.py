@@ -655,10 +655,12 @@ def main():
             print(f"\n按网站分布:")
             for source, source_stats in stats['sources'].items():
                 print(f"  {source}: 新增 {source_stats['new']}, 更新 {source_stats['updated']}")
-            
-            if args.mode == 'local':
+
+            if args.mode == 'local' and radar.db:
+                deleted = radar.db.delete_older_than(days=30)
                 db_stats = radar.get_stats()
-                print(f"\n数据库总职位数: {db_stats['total_jobs']}")
+                print(f"\n数据库清理: 已删除 {deleted} 个超过30天的旧职位")
+                print(f"数据库总职位数: {db_stats['total_jobs']}")
                 
         finally:
             await radar.close()

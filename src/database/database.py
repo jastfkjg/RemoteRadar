@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional
 from contextlib import contextmanager
 
@@ -182,6 +182,14 @@ class Database:
             cursor.execute('SELECT job_id FROM job_listings WHERE source=?', (source,))
             return {row[0] for row in cursor.fetchall()}
     
+    def delete_older_than(self, days: int = 30) -> int:
+        cutoff = (datetime.now() - timedelta(days=days)).isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM job_listings WHERE posted_at < ?', (cutoff,))
+            conn.commit()
+            return cursor.rowcount
+
     def get_categories(self) -> List[str]:
         with self.get_connection() as conn:
             cursor = conn.cursor()
